@@ -1,0 +1,3039 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bianca Iéck — KPIs</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --gold: #C9A84C;
+  --gold-light: #E8C96A;
+  --gold-pale: #FBF5E6;
+  --navy: #1A2744;
+  --navy-mid: #243360;
+  --navy-light: #2E4080;
+  --off-white: #F9F7F3;
+  --white: #FFFFFF;
+  --text-dark: #1A1A2E;
+  --text-mid: #4A4A6A;
+  --text-light: #9090AA;
+  --border: #EAE6DA;
+  --red: #D94040;
+  --yellow: #E8A020;
+  --blue: #3A7BD5;
+  --green: #3AAA6A;
+  --sidebar-w: 230px;
+  --radius: 12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Outfit',sans-serif;background:var(--off-white);color:var(--text-dark);min-height:100vh;display:flex;}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar-w);min-height:100vh;background:var(--navy);display:flex;flex-direction:column;position:fixed;left:0;top:0;z-index:100;box-shadow:4px 0 24px rgba(0,0,0,0.15);}
+.logo-wrap{padding:28px 22px 22px;border-bottom:1px solid rgba(201,168,76,0.18);}
+.logo-wrap h1{font-family:'Cormorant Garamond',serif;color:var(--gold);font-size:23px;font-weight:700;letter-spacing:0.3px;line-height:1.2;}
+.logo-wrap p{color:rgba(255,255,255,0.38);font-size:10px;letter-spacing:1.8px;text-transform:uppercase;margin-top:4px;}
+.nav{flex:1;padding:14px 0;overflow-y:auto;}
+.nav-item{display:flex;align-items:center;gap:11px;padding:10px 22px;cursor:pointer;transition:all 0.18s;color:rgba(255,255,255,0.48);font-size:13.5px;font-weight:400;border-left:3px solid transparent;user-select:none;}
+.nav-item:hover{color:rgba(255,255,255,0.85);background:rgba(255,255,255,0.04);}
+.nav-item.active{color:var(--gold);background:rgba(201,168,76,0.09);border-left-color:var(--gold);font-weight:500;}
+.nav-icon{font-size:15px;width:18px;text-align:center;flex-shrink:0;}
+.sidebar-footer{padding:16px 22px;border-top:1px solid rgba(255,255,255,0.07);font-size:11px;color:rgba(255,255,255,0.25);}
+
+/* MAIN */
+.main{margin-left:var(--sidebar-w);flex:1;min-height:100vh;display:flex;flex-direction:column;}
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:14px 30px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:0 1px 8px rgba(0,0,0,0.05);}
+.topbar-left h2{font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:600;color:var(--navy);}
+.topbar-left p{font-size:12px;color:var(--text-light);margin-top:1px;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.content{padding:26px 30px;flex:1;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all 0.18s;font-family:'Outfit',sans-serif;}
+.btn-primary{background:var(--gold);color:var(--navy);}
+.btn-primary:hover{background:var(--gold-light);}
+.btn-secondary{background:transparent;color:var(--text-mid);border:1px solid var(--border);}
+.btn-secondary:hover{border-color:var(--gold);color:var(--gold);}
+.btn-danger{background:rgba(217,64,64,0.08);color:var(--red);border:1px solid rgba(217,64,64,0.2);}
+.btn-danger:hover{background:rgba(217,64,64,0.15);}
+.btn-sm{padding:6px 12px;font-size:12px;}
+
+/* TABS */
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* CARDS */
+.card{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);padding:20px;}
+.card-title{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:600;color:var(--navy);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.kpi-card{background:var(--white);border-radius:var(--radius);padding:18px 20px;border:1px solid var(--border);position:relative;overflow:hidden;}
+.kpi-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),var(--gold-light));}
+.kpi-label{font-size:10.5px;text-transform:uppercase;letter-spacing:1.1px;color:var(--text-light);margin-bottom:8px;font-weight:500;}
+.kpi-value{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:700;color:var(--navy);line-height:1;}
+.kpi-value.sm{font-size:22px;}
+.kpi-sub{font-size:11.5px;color:var(--text-light);margin-top:6px;}
+.kpi-trend{font-size:11px;margin-top:4px;font-weight:500;}
+.kpi-trend.up{color:var(--green);}
+.kpi-trend.down{color:var(--red);}
+
+/* GRID LAYOUTS */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.grid-15{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;}
+.mb16{margin-bottom:16px;}
+.mb20{margin-bottom:20px;}
+
+/* PROGRESS */
+.meta-item{margin-bottom:13px;}
+.meta-item:last-child{margin-bottom:0;}
+.meta-header{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;}
+.meta-name{color:var(--text-mid);}
+.meta-pct{font-weight:600;}
+.meta-pct.g{color:var(--green);}
+.meta-pct.y{color:var(--yellow);}
+.meta-pct.r{color:var(--red);}
+.progress-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:3px;}
+.progress-fill.g{background:var(--green);}
+.progress-fill.y{background:var(--yellow);}
+.progress-fill.r{background:var(--red);}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap;}
+.badge-red{background:rgba(217,64,64,0.1);color:var(--red);}
+.badge-yellow{background:rgba(232,160,32,0.1);color:var(--yellow);}
+.badge-blue{background:rgba(58,123,213,0.1);color:var(--blue);}
+.badge-green{background:rgba(58,170,106,0.1);color:var(--green);}
+.badge-gray{background:var(--border);color:var(--text-light);}
+.badge-gold{background:rgba(201,168,76,0.12);color:#9A7020;}
+.badge-navy{background:rgba(26,39,68,0.08);color:var(--navy);}
+
+/* STATUS PILLS */
+.pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;}
+.s-novo{background:#EEF2FF;color:#4F46E5;}
+.s-contatado{background:#FFF7ED;color:#C2410C;}
+.s-visita{background:#EFF6FF;color:#1D4ED8;}
+.s-visitou{background:#F0F9FF;color:#0369A1;}
+.s-proposta{background:#FDF4FF;color:#7C3AED;}
+.s-negociacao{background:#FFFBEB;color:#B45309;}
+.s-vendido{background:#F0FDF4;color:#166534;}
+.s-descartado{background:#FEF2F2;color:#991B1B;}
+.s-captado{background:#ECFDF5;color:#065F46;}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;}
+.data-table{width:100%;border-collapse:collapse;}
+.data-table th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:0.9px;color:var(--text-light);padding:10px 14px;border-bottom:2px solid var(--border);font-weight:500;white-space:nowrap;}
+.data-table td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle;}
+.data-table tr:hover td{background:rgba(201,168,76,0.03);}
+.data-table tr:last-child td{border-bottom:none;}
+.td-name{font-weight:500;}
+.td-sub{font-size:11px;color:var(--text-light);margin-top:2px;}
+.action-btn{background:none;border:none;cursor:pointer;padding:5px 8px;border-radius:6px;font-size:13px;color:var(--text-light);transition:all 0.15s;}
+.action-btn:hover{color:var(--navy);background:var(--border);}
+.action-btn.del:hover{color:var(--red);background:rgba(217,64,64,0.08);}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.search-input{flex:1;min-width:180px;padding:9px 13px;border:1px solid var(--border);border-radius:9px;font-size:13px;font-family:'Outfit',sans-serif;background:var(--white);color:var(--text-dark);}
+.search-input:focus{outline:none;border-color:var(--gold);}
+.f-select{padding:9px 13px;border:1px solid var(--border);border-radius:9px;font-size:13px;font-family:'Outfit',sans-serif;background:var(--white);cursor:pointer;}
+.f-select:focus{outline:none;border-color:var(--gold);}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.52);z-index:1000;align-items:center;justify-content:center;padding:16px;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--white);border-radius:16px;width:100%;max-width:640px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 70px rgba(0,0,0,0.22);}
+.modal-hdr{padding:22px 26px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--white);z-index:2;}
+.modal-hdr h3{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--navy);}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-light);padding:2px 6px;border-radius:6px;}
+.modal-close:hover{background:var(--border);}
+.modal-body{padding:22px 26px;}
+.modal-footer{padding:14px 26px 22px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--border);}
+.modal-lg{max-width:760px;}
+
+/* FORM */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.fg{display:flex;flex-direction:column;gap:5px;}
+.fg.full{grid-column:1/-1;}
+.fg label{font-size:11.5px;font-weight:500;color:var(--text-mid);letter-spacing:0.2px;}
+.fg label.req::after{content:' *';color:var(--red);}
+.fi,.fs,.ft{padding:9px 13px;border:1px solid var(--border);border-radius:9px;font-size:13px;font-family:'Outfit',sans-serif;color:var(--text-dark);background:var(--white);transition:border-color 0.18s;width:100%;}
+.fi:focus,.fs:focus,.ft:focus{outline:none;border-color:var(--gold);}
+.ft{resize:vertical;min-height:76px;}
+.form-section{margin-top:18px;padding-top:16px;border-top:1px solid var(--border);margin-bottom:6px;}
+.form-section-title{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--gold);font-weight:600;}
+.hidden{display:none!important;}
+
+/* COMMISSION BOX */
+.comm-box{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-mid) 100%);border-radius:12px;padding:18px;margin-top:14px;}
+.comm-box h4{color:var(--gold);font-size:11px;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:14px;font-weight:600;}
+.comm-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.07);}
+.comm-row:last-child{border-bottom:none;padding-bottom:0;}
+.comm-label{color:rgba(255,255,255,0.6);font-size:12px;}
+.comm-value{color:var(--white);font-weight:600;font-size:13.5px;}
+.comm-row.hl .comm-label{color:var(--gold-light);}
+.comm-row.hl .comm-value{color:var(--gold-light);font-size:20px;font-family:'Cormorant Garamond',serif;font-weight:700;}
+
+/* INSIGHT BOX */
+.insight{background:rgba(201,168,76,0.07);border:1px solid rgba(201,168,76,0.25);border-radius:9px;padding:12px 14px;margin-top:14px;}
+.insight p{font-size:12.5px;color:var(--text-mid);line-height:1.65;}
+.insight strong{color:var(--navy);}
+
+/* ALERT CONTACTS */
+.alert-item{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:9px;margin-bottom:8px;}
+.alert-item.r{background:rgba(217,64,64,0.07);border-left:3px solid var(--red);}
+.alert-item.y{background:rgba(232,160,32,0.07);border-left:3px solid var(--yellow);}
+.alert-item.b{background:rgba(58,123,213,0.07);border-left:3px solid var(--blue);}
+.alert-name{font-size:13px;font-weight:500;}
+.alert-info{font-size:11px;color:var(--text-light);margin-top:2px;}
+
+/* FUNNEL */
+.funnel{display:flex;flex-direction:column;gap:9px;}
+.funnel-step{display:flex;align-items:center;gap:10px;}
+.funnel-lbl{font-size:11px;color:var(--text-light);width:72px;text-align:right;flex-shrink:0;}
+.funnel-bar-wrap{flex:1;}
+.funnel-bar{height:30px;border-radius:7px;display:flex;align-items:center;padding:0 12px;color:white;font-size:12px;font-weight:500;transition:width 0.5s;}
+.funnel-n{font-size:12px;font-weight:600;color:var(--navy);width:38px;flex-shrink:0;}
+
+/* TIMELINE */
+.timeline{padding-left:20px;position:relative;}
+.timeline::before{content:'';position:absolute;left:7px;top:0;bottom:0;width:2px;background:var(--border);}
+.tl-item{position:relative;margin-bottom:14px;}
+.tl-dot{position:absolute;left:-16px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--gold);border:2px solid var(--white);box-shadow:0 0 0 2px var(--gold);}
+.tl-content{background:var(--off-white);border-radius:8px;padding:10px 13px;}
+.tl-date{font-size:11px;color:var(--text-light);margin-bottom:3px;}
+.tl-text{font-size:13px;}
+
+/* INNER TABS */
+.inner-tabs{display:flex;gap:3px;margin-bottom:18px;background:var(--white);padding:4px;border-radius:10px;border:1px solid var(--border);width:fit-content;}
+.inner-tab{padding:7px 16px;border-radius:8px;font-size:13px;cursor:pointer;border:none;background:none;color:var(--text-mid);font-family:'Outfit',sans-serif;font-weight:400;transition:all 0.18s;}
+.inner-tab.active{background:var(--navy);color:var(--white);font-weight:500;}
+
+/* NOTIF */
+.notif{display:none;position:fixed;top:18px;right:18px;z-index:2000;background:var(--navy);color:var(--white);padding:14px 18px;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.25);max-width:310px;border-left:4px solid var(--gold);animation:slideIn 0.3s ease;}
+.notif.show{display:flex;align-items:flex-start;gap:12px;}
+.notif-text{flex:1;font-size:13px;line-height:1.5;}
+.notif-x{background:none;border:none;color:rgba(255,255,255,0.45);cursor:pointer;font-size:16px;padding:0;flex-shrink:0;}
+@keyframes slideIn{from{transform:translateX(16px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+/* LOADING */
+.loading{display:flex;align-items:center;justify-content:center;padding:40px;color:var(--text-light);font-size:14px;gap:10px;}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.empty{text-align:center;padding:40px;color:var(--text-light);font-size:14px;}
+.empty-icon{font-size:36px;margin-bottom:10px;}
+
+/* COMMISSION RECEIVE BOXES */
+.recv-box{display:flex;justify-content:space-between;align-items:center;padding:10px 13px;border-radius:9px;border-left:3px solid;}
+.recv-30{background:rgba(58,170,106,0.07);border-color:var(--green);}
+.recv-60{background:rgba(201,168,76,0.07);border-color:var(--gold);}
+.recv-90{background:rgba(58,123,213,0.07);border-color:var(--blue);}
+.recv-label{font-size:12px;color:var(--text-mid);}
+.recv-value{font-weight:700;}
+
+/* MOBILE NAV BAR */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:var(--navy);border-top:1px solid rgba(201,168,76,0.2);padding:6px 0 8px;}
+.mobile-nav-items{display:flex;justify-content:space-around;align-items:center;}
+.mobile-nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 10px;cursor:pointer;color:rgba(255,255,255,0.45);font-size:9px;letter-spacing:0.3px;border-radius:8px;transition:all 0.18s;min-width:52px;text-align:center;}
+.mobile-nav-item.active{color:var(--gold);}
+.mobile-nav-item .mn-icon{font-size:20px;line-height:1;}
+.mobile-nav-label{font-size:9px;white-space:nowrap;}
+
+/* DRAWER LATERAL */
+.drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;}
+.drawer-overlay.open{display:block;}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:80%;max-width:280px;z-index:400;background:var(--navy);transform:translateX(100%);transition:transform 0.28s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;box-shadow:-8px 0 32px rgba(0,0,0,0.25);}
+.drawer.open{transform:translateX(0);}
+.drawer-header{padding:24px 20px 16px;border-bottom:1px solid rgba(201,168,76,0.18);display:flex;align-items:center;justify-content:space-between;}
+.drawer-header h1{font-family:'Cormorant Garamond',serif;color:var(--gold);font-size:20px;font-weight:700;}
+.drawer-header p{color:rgba(255,255,255,0.38);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;margin-top:3px;}
+.drawer-close{background:none;border:none;color:rgba(255,255,255,0.45);font-size:22px;cursor:pointer;padding:4px 8px;border-radius:8px;line-height:1;}
+.drawer-close:active{background:rgba(255,255,255,0.08);}
+.drawer-nav{flex:1;padding:10px 0;overflow-y:auto;}
+.drawer-nav-item{display:flex;align-items:center;gap:12px;padding:13px 20px;cursor:pointer;color:rgba(255,255,255,0.55);font-size:14px;border-left:3px solid transparent;transition:all 0.15s;}
+.drawer-nav-item:active{background:rgba(255,255,255,0.06);}
+.drawer-nav-item.active{color:var(--gold);background:rgba(201,168,76,0.09);border-left-color:var(--gold);font-weight:500;}
+.drawer-nav-item .dn-icon{font-size:17px;width:22px;text-align:center;flex-shrink:0;}
+.drawer-footer{padding:14px 20px;border-top:1px solid rgba(255,255,255,0.07);}
+.drawer-footer button{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;border-radius:10px;background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.25);color:var(--gold);font-size:13px;font-family:'Outfit',sans-serif;cursor:pointer;}
+
+/* MOBILE MORE MENU (mantido mas não usado) */
+.mobile-more-overlay{display:none;}
+.mobile-more-sheet{display:none;}
+
+/* HAMBURGER BUTTON in topbar */
+.menu-btn{display:none;background:none;border:none;font-size:22px;cursor:pointer;color:var(--navy);padding:4px 8px;border-radius:8px;}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .sidebar{display:none;}
+  .main{margin-left:0;padding-bottom:72px;}
+  .kpi-grid{grid-template-columns:1fr 1fr;}
+  .grid-2,.grid-3,.grid-15{grid-template-columns:1fr;}
+  .form-grid{grid-template-columns:1fr;}
+  .content{padding:14px;}
+  .topbar{padding:12px 16px;}
+  .mobile-nav{display:block;}
+  .menu-btn{display:block;}
+  .topbar-right .btn-secondary{display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="logo-wrap">
+    <h1>Bianca Iéck</h1>
+    <p>Acompanhamento de KPIs</p>
+  </div>
+  <div class="nav" id="sideNav">
+    <div class="nav-item active" data-tab="dashboard"><span class="nav-icon">📊</span>Dashboard</div>
+    <div class="nav-item" data-tab="leads"><span class="nav-icon">👥</span>Leads</div>
+    <div class="nav-item" data-tab="captacoes"><span class="nav-icon">🏠</span>Captações</div>
+    <div class="nav-item" data-tab="vendas"><span class="nav-icon">💰</span>Vendas</div>
+    <div class="nav-item" data-tab="panfletagem"><span class="nav-icon">📄</span>Panfletagem</div>
+    <div class="nav-item" data-tab="metas"><span class="nav-icon">🎯</span>Metas</div>
+    <div class="nav-item" data-tab="email"><span class="nav-icon">✉️</span>E-mail Marketing</div>
+    <div class="nav-item" data-tab="analises"><span class="nav-icon">📈</span>Análises</div>
+  </div>
+  <div class="sidebar-footer">Bianca Iéck © 2026</div>
+</nav>
+
+<!-- NOTIFICATION -->
+<div class="notif" id="notifBanner">
+  <span style="font-size:20px">🔔</span>
+  <div class="notif-text" id="notifText">Verificando alertas...</div>
+  <button class="notif-x" onclick="document.getElementById('notifBanner').classList.remove('show')">✕</button>
+</div>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button class="menu-btn" onclick="toggleMobileMore()">☰</button>
+      <div class="topbar-left">
+        <h2 id="pageTitle">Dashboard</h2>
+        <p id="pageSubtitle">Visão geral dos indicadores</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-secondary btn-sm" onclick="exportarDados()">⬇ Exportar</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ══════════════════════════════════════════════
+         ABA 1 — DASHBOARD
+    ══════════════════════════════════════════════ -->
+    <div class="tab-panel active" id="tab-dashboard">
+      <div class="kpi-grid mb20" id="dashKPIs">
+        <div class="kpi-card"><div class="kpi-label">Leads Contatados — Mês</div><div class="kpi-value" id="dLeadsMes">—</div><div class="kpi-sub">Semana: <span id="dLeadsSem">—</span></div></div>
+        <div class="kpi-card"><div class="kpi-label">Captações — Mês</div><div class="kpi-value" id="dCaptMes">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">Vendas — Mês</div><div class="kpi-value" id="dVendasMes">—</div><div class="kpi-sub" id="dVendasValor">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">Comissão Líquida — Mês</div><div class="kpi-value sm" id="dComissaoLiq">—</div><div class="kpi-sub">Bruta: <span id="dComissaoBruta">—</span></div></div>
+      </div>
+
+      <div class="grid-15 mb16">
+        <div class="card">
+          <div class="card-title">📞 Contatos Realizados vs Meta — Últimas 6 semanas</div>
+          <canvas id="chartDashContatos" height="110"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-title">🎯 Metas da Semana</div>
+          <div id="dashMetas"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+        </div>
+      </div>
+
+      <div class="grid-3 mb16">
+        <div class="card">
+          <div class="card-title">🔁 Funil de Conversão</div>
+          <div class="funnel" id="dashFunil">
+            <div class="funnel-step"><div class="funnel-lbl">Leads</div><div class="funnel-bar-wrap"><div class="funnel-bar" id="fLeads" style="background:var(--navy);width:100%">—</div></div></div>
+            <div class="funnel-step"><div class="funnel-lbl">Visitas</div><div class="funnel-bar-wrap"><div class="funnel-bar" id="fVisitas" style="background:var(--navy-mid);width:70%">—</div></div></div>
+            <div class="funnel-step"><div class="funnel-lbl">Propostas</div><div class="funnel-bar-wrap"><div class="funnel-bar" id="fPropostas" style="background:var(--gold);width:40%;color:var(--navy)">—</div></div></div>
+            <div class="funnel-step"><div class="funnel-lbl">Vendas</div><div class="funnel-bar-wrap"><div class="funnel-bar" id="fVendas" style="background:var(--green);width:15%">—</div></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">💵 Comissões a Receber</div>
+          <div style="display:flex;flex-direction:column;gap:9px;" id="dashReceber">
+            <div class="recv-box recv-30"><span class="recv-label">Próximos 30 dias</span><span class="recv-value" style="color:var(--green)" id="recv30">—</span></div>
+            <div class="recv-box recv-60"><span class="recv-label">Próximos 60 dias</span><span class="recv-value" style="color:var(--gold)" id="recv60">—</span></div>
+            <div class="recv-box recv-90"><span class="recv-label">Próximos 90 dias</span><span class="recv-value" style="color:var(--blue)" id="recv90">—</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">⚠️ Próximos Contatos</div>
+          <div id="dashContatos"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+      </div>
+
+      <div class="grid-2 mb16">
+        <div class="card">
+          <div class="card-title">🌐 Origem dos Leads — Acumulado</div>
+          <canvas id="chartDashOrigem" height="180"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-title">📊 Contatos Realizados — Últimos 6 meses</div>
+          <canvas id="chartDashLeads" height="180"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════
+         ABA 2 — LEADS
+    ══════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-leads">
+      <div class="toolbar">
+        <input type="text" class="search-input" id="leadSearch" placeholder="🔍 Buscar por nome..." oninput="renderLeads()">
+        <select class="f-select" id="leadFilterStatus" onchange="renderLeads()">
+          <option value="">Todos os status</option>
+          <option>Novo</option><option>Contatado</option><option>Visita Agendada</option>
+          <option>Visitou Imóvel</option><option>Proposta Feita</option>
+          <option>Negociação</option><option>Vendido</option><option>Descartado</option>
+        </select>
+        <select class="f-select" id="leadFilterOrigem" onchange="renderLeads()">
+          <option value="">Todas as origens</option>
+          <option>Plantão</option><option>Indicação Perfil</option><option>Patrocinado Próprio</option>
+          <option>Instagram</option><option>Facebook</option><option>Indicação Cliente</option>
+          <option>Indicação Amigo</option><option>Folder</option><option>Cliente Captação</option>
+          <option>Lista de Construtora</option><option>Outro</option>
+        </select>
+        <select class="f-select" id="leadFilterUrgencia" onchange="renderLeads()">
+          <option value="">Urgência: Todas</option>
+          <option>Atrasado</option><option>Hoje</option><option>Amanhã</option>
+        </select>
+        <button class="btn btn-primary" onclick="novoLead()">+ Novo Lead</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr>
+              <th>Nome</th><th>Interesse</th><th>Orçamento</th>
+              <th>Status</th><th>Próx. Contato</th><th>Origem</th><th>Ações</th>
+            </tr></thead>
+            <tbody id="leadsBody"><tr><td colspan="7"><div class="loading"><div class="spinner"></div>Carregando...</div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════
+         ABA 3 — CAPTAÇÕES
+    ══════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-captacoes">
+      <div class="toolbar">
+        <input type="text" class="search-input" id="captSearch" placeholder="🔍 Buscar por proprietário ou código..." oninput="renderCaptacoes()">
+        <select class="f-select" id="captFilterStatus" onchange="renderCaptacoes()">
+          <option value="">Todos os status</option>
+          <option>Novo</option><option>Contatado</option><option>Visita Agendada</option>
+          <option>Visitou Imóvel</option><option>Proposta Feita</option><option>Negociação</option>
+          <option>Captado</option><option>Descartado</option><option>Vendido</option>
+        </select>
+        <button class="btn btn-primary" onclick="novaCaptacao()">+ Nova Captação</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr>
+              <th>Proprietário / Código</th><th>Imóvel</th><th>Valor</th>
+              <th>Características</th><th>Status</th><th>Origem</th><th>Ações</th>
+            </tr></thead>
+            <tbody id="captacoesBody"><tr><td colspan="7"><div class="loading"><div class="spinner"></div>Carregando...</div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════
+         ABA 4 — VENDAS
+    ══════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-vendas">
+      <div class="toolbar">
+        <input type="text" class="search-input" id="vendaSearch" placeholder="🔍 Buscar por imóvel ou comprador..." oninput="renderVendas()">
+        <select class="f-select" id="vendaFilterStatus" onchange="renderVendas()">
+          <option value="">Todos os status</option>
+          <option>Contrato Assinado</option><option>Escritura Feita</option><option>Comissão Recebida</option>
+        </select>
+        <button class="btn btn-primary" onclick="novaVenda()">+ Registrar Venda</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr>
+              <th>Imóvel</th><th>Comprador</th><th>Valor do Imóvel</th>
+              <th>Comissão Bruta</th><th>Comissão Líquida</th><th>Status</th><th>Ações</th>
+            </tr></thead>
+            <tbody id="vendasBody"><tr><td colspan="7"><div class="loading"><div class="spinner"></div>Carregando...</div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════
+         ABA 5 — PANFLETAGEM
+    ══════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-panfletagem">
+      <div class="kpi-grid mb20">
+        <div class="kpi-card"><div class="kpi-label">Panfletos no Mês</div><div class="kpi-value" id="pTotal">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">Bairros Cobertos</div><div class="kpi-value" id="pBairros">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">Leads via Folder</div><div class="kpi-value" id="pLeads">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">Taxa de Conversão</div><div class="kpi-value" id="pTaxa">—</div></div>
+      </div>
+      <div class="toolbar">
+        <input type="text" class="search-input" placeholder="🔍 Buscar por bairro...">
+        <button class="btn btn-primary" onclick="novaPanfleto()">+ Nova Distribuição</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Data</th><th>Bairro</th><th>Cidade</th><th>Qtd. Panfletos</th><th>Observações</th><th>Ações</th></tr></thead>
+            <tbody id="panfletaBody"><tr><td colspan="6"><div class="loading"><div class="spinner"></div>Carregando...</div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════
+         ABA 6 — METAS
+    ══════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-metas">
+
+      <!-- Filtro Mês / Ano separados -->
+      <div class="card mb16">
+        <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;">
+          <div class="fg" style="min-width:140px;max-width:200px;">
+            <label style="font-size:11.5px;font-weight:500;color:var(--text-mid);">Mês</label>
+            <select class="fs" id="metaMes" onchange="onMesAnoChange()">
+              <option value="0">Janeiro</option><option value="1">Fevereiro</option><option value="2">Março</option>
+              <option value="3">Abril</option><option value="4">Maio</option><option value="5">Junho</option>
+              <option value="6">Julho</option><option value="7">Agosto</option><option value="8">Setembro</option>
+              <option value="9">Outubro</option><option value="10">Novembro</option><option value="11">Dezembro</option>
+            </select>
+          </div>
+          <div class="fg" style="min-width:100px;max-width:140px;">
+            <label style="font-size:11.5px;font-weight:500;color:var(--text-mid);">Ano</label>
+            <select class="fs" id="metaAno" onchange="onMesAnoChange()"></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Semanas do mês selecionado -->
+      <div id="metaSemanasContainer" class="mb16"></div>
+
+      <!-- Histórico de metas salvas -->
+      <div class="card">
+        <div class="card-title">📋 Histórico de Metas</div>
+        <div id="metaHistorico"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════
+         ABA 7 — E-MAIL MARKETING
+    ══════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-email">
+      <div class="inner-tabs">
+        <button class="inner-tab active" onclick="switchInner(this,'em-seg')">Segmentação</button>
+        <button class="inner-tab" onclick="switchInner(this,'em-grupos')">Grupos Automáticos</button>
+        <button class="inner-tab" onclick="switchInner(this,'em-hist')">Histórico de Disparos</button>
+      </div>
+
+      <div id="em-seg">
+        <div class="card mb16">
+          <div class="card-title">🔍 Filtrar Leads para Campanha</div>
+          <div class="form-grid">
+            <div class="fg"><label>Tipo de imóvel</label>
+              <select class="fs" id="emTipo"><option value="">Todos</option><option>Apartamento</option><option>Casa</option><option>Sobrado</option><option>Terreno</option><option>Sala Comercial</option><option>Galpão</option></select>
+            </div>
+            <div class="fg"><label>Quartos</label>
+              <select class="fs" id="emQuartos"><option value="">Todos</option><option>1 Dormitório</option><option>2 Dormitórios</option><option>Suíte + 1</option><option>Suíte + 2</option><option>2 Suítes</option><option>3 Suítes</option><option>4 Suítes</option></select>
+            </div>
+            <div class="fg"><label>Orçamento mínimo</label><input type="number" class="fi" id="emOrcMin" placeholder="R$ mínimo"></div>
+            <div class="fg"><label>Orçamento máximo</label><input type="number" class="fi" id="emOrcMax" placeholder="R$ máximo"></div>
+            <div class="fg"><label>Financiamento</label><select class="fs" id="emFin"><option value="">Todos</option><option value="true">Sim</option><option value="false">Não</option></select></div>
+            <div class="fg"><label>Preferência</label><select class="fs" id="emPref"><option value="">Todas</option><option>Pronto</option><option>Na Planta</option><option>Ambos</option></select></div>
+          </div>
+          <div style="margin-top:14px;display:flex;gap:10px;">
+            <button class="btn btn-primary" onclick="filtrarLeadsEmail()">Aplicar Filtros</button>
+            <button class="btn btn-secondary" onclick="limparFiltrosEmail()">Limpar</button>
+          </div>
+        </div>
+        <div class="card" id="emResultado" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <div><div class="card-title" style="margin-bottom:2px" id="emQtd">0 leads encontrados</div><p style="font-size:12px;color:var(--text-light)" id="emResumo"></p></div>
+            <button class="btn btn-primary btn-sm" onclick="exportarListaEmail()">⬇ Exportar Lista</button>
+          </div>
+          <div class="table-wrap mb16">
+            <table class="data-table"><thead><tr><th>Nome</th><th>E-mail</th><th>Tipo</th><th>Orçamento</th><th>Status</th></tr></thead>
+            <tbody id="emLeadsBody"></tbody></table>
+          </div>
+          <div class="form-section"><div class="form-section-title">Registrar Disparo</div></div>
+          <div class="form-grid" style="margin-top:10px;">
+            <div class="fg full"><label class="req">Nome da campanha / empreendimento</label><input type="text" class="fi" id="emCampanha" placeholder="ex: Lançamento Residencial Petrópolis"></div>
+            <div class="fg"><label>Data do envio</label><input type="date" class="fi" id="emData"></div>
+            <div class="fg"><label>Observações</label><input type="text" class="fi" id="emObs" placeholder="Opcional"></div>
+          </div>
+          <div style="margin-top:12px;"><button class="btn btn-primary" onclick="registrarDisparo()">Registrar Disparo</button></div>
+        </div>
+      </div>
+
+      <div id="em-grupos" style="display:none">
+        <div class="card mb16">
+          <div class="card-title">🗂 Grupos Automáticos por Perfil</div>
+          <p style="font-size:13px;color:var(--text-mid);margin-bottom:14px;">Grupos gerados automaticamente agrupando leads com o mesmo tipo de imóvel, faixa de valor, quartos e preferência.</p>
+          <button class="btn btn-primary" onclick="gerarGrupos()">🔄 Gerar / Atualizar Grupos</button>
+        </div>
+        <div id="gruposContainer"></div>
+      </div>
+
+      <div id="em-hist" style="display:none">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+          <button class="btn btn-primary" onclick="abrirNovoDisparo()">+ Registrar Disparo</button>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead><tr><th>Data</th><th>Empreendimento</th><th>Tipo</th><th>Grupo / Leads</th><th>Cidade / Bairro</th><th>Valor</th><th>Ações</th></tr></thead>
+              <tbody id="disparosBody"><tr><td colspan="7"><div class="loading"><div class="spinner"></div>Carregando...</div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════
+         ABA 8 — ANÁLISES
+    ══════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-analises">
+      <div class="inner-tabs">
+        <button class="inner-tab active" onclick="switchInner(this,'an-leads');loadAnalises('leads')">Leads</button>
+        <button class="inner-tab" onclick="switchInner(this,'an-capt');loadAnalises('capt')">Captações</button>
+        <button class="inner-tab" onclick="switchInner(this,'an-vendas');loadAnalises('vendas')">Vendas</button>
+        <button class="inner-tab" onclick="switchInner(this,'an-panf');loadAnalises('panf')">Panfletagem</button>
+        <button class="inner-tab" onclick="switchInner(this,'an-estrategia');loadAnalises('estrategia')">Visão Estratégica</button>
+      </div>
+
+      <div id="an-leads">
+        <div class="grid-2 mb16">
+          <div class="card"><div class="card-title">📞 Contatos Realizados vs Meta</div><canvas id="cContatos" height="160"></canvas></div>
+          <div class="card"><div class="card-title">📱 Taxa de Resposta por Canal</div><canvas id="cCanal" height="160"></canvas></div>
+        </div>
+        <div class="grid-2 mb16">
+          <div class="card"><div class="card-title">🔄 Tentativas até Resposta</div><canvas id="cTentativas" height="160"></canvas><div class="insight" id="insLeads"></div></div>
+          <div class="card"><div class="card-title">🌐 Origem dos Leads</div><canvas id="cOrigemLeads" height="160"></canvas></div>
+        </div>
+        <div class="grid-2 mb16">
+          <div class="card"><div class="card-title">🕐 Melhor Horário para Contato</div><canvas id="cHorario" height="160"></canvas><div class="insight" id="insHorario"></div></div>
+          <div class="card"><div class="card-title">✅ Taxa de Resposta por Horário</div><canvas id="cHorarioTaxa" height="160"></canvas></div>
+        </div>
+      </div>
+
+      <div id="an-capt" style="display:none">
+        <div class="grid-2 mb16">
+          <div class="card"><div class="card-title">🏠 Captações por Mês</div><canvas id="cCaptMes" height="180"></canvas></div>
+          <div class="card"><div class="card-title">🏷 Tipo de Imóvel Captado</div><canvas id="cCaptTipo" height="180"></canvas><div class="insight" id="insCapt"></div></div>
+        </div>
+      </div>
+
+      <div id="an-vendas" style="display:none">
+        <div class="grid-2 mb16">
+          <div class="card"><div class="card-title">💰 Comissão por Mês</div><canvas id="cVendasMes" height="180"></canvas></div>
+          <div class="card"><div class="card-title">🧩 Tipo de Comissão</div><canvas id="cTipoComissao" height="180"></canvas><div class="insight" id="insVendas"></div></div>
+        </div>
+        <div class="card mb16" style="max-width:500px">
+          <div class="card-title">📦 Totais no Ano</div>
+          <div class="grid-3" id="totaisAno"></div>
+        </div>
+      </div>
+
+      <div id="an-panf" style="display:none">
+        <div class="grid-2 mb16">
+          <div class="card"><div class="card-title">📄 Panfletos por Mês</div><canvas id="cPanfMes" height="180"></canvas></div>
+          <div class="card"><div class="card-title">📍 Conversão por Bairro</div><canvas id="cPanfBairro" height="180"></canvas><div class="insight" id="insPanf"></div></div>
+        </div>
+      </div>
+
+      <div id="an-estrategia" style="display:none">
+        <div class="grid-2 mb16">
+          <div class="card"><div class="card-title">🏆 Top Canais de Conversão</div><div id="topCanais"></div></div>
+          <div class="card"><div class="card-title">🗺 Mapa de Oportunidades — Bairros</div><canvas id="cMapa" height="220"></canvas><div class="insight" id="insMapa"></div></div>
+        </div>
+        <div class="grid-2">
+          <div class="card"><div class="card-title">⏱ Ciclo Médio de Venda</div><div id="cicloVenda" style="text-align:center;padding:20px"></div></div>
+          <div class="card"><div class="card-title">💎 Ticket Médio por Bairro</div><canvas id="cTicket" height="180"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<!-- ══════════════════════════════════════════════
+     MODAIS
+══════════════════════════════════════════════ -->
+
+<!-- MODAL LEAD -->
+<div class="modal-bg" id="mLead">
+  <div class="modal modal-lg">
+    <div class="modal-hdr"><h3 id="mLeadTitle">+ Novo Lead</h3><button class="modal-close" onclick="closeModal('mLead')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="lId">
+      <div class="form-grid">
+        <div class="fg full"><label class="req">Nome</label><input type="text" class="fi" id="lNome" placeholder="Nome completo"></div>
+        <div class="fg"><label class="req">Telefone principal</label><input type="text" class="fi" id="lTel1" placeholder="(47) 99999-9999"></div>
+        <div class="fg"><label>Telefone adicional</label><input type="text" class="fi" id="lTel2" placeholder="Opcional"></div>
+        <div class="fg"><label>E-mail principal</label><input type="email" class="fi" id="lEmail1" placeholder="email@exemplo.com"></div>
+        <div class="fg"><label>E-mail adicional</label><input type="email" class="fi" id="lEmail2" placeholder="Opcional"></div>
+        <div class="fg"><label>Tipo de imóvel</label>
+          <select class="fs" id="lTipo" onchange="toggleQuartosLead()">
+            <option>Apartamento</option><option>Casa</option><option>Sobrado</option><option>Sobrado Geminado</option><option>Terreno</option><option>Sala Comercial</option><option>Galpão</option><option>Outro</option>
+          </select>
+        </div>
+        <div class="fg" id="lQuartosWrap"><label>Quartos</label>
+          <select class="fs" id="lQuartos" onchange="toggleQuartosOutroLead()">
+            <option>1 Dormitório</option><option>2 Dormitórios</option><option>Suíte + 1</option><option>Suíte + 2</option><option>2 Suítes</option><option>3 Suítes</option><option>4 Suítes</option><option>Outro</option>
+          </select>
+        </div>
+        <div class="fg hidden" id="lQuartosOutroWrap"><label>Especificar dormitório</label><input type="text" class="fi" id="lQuartosOutro" placeholder="Descreva..."></div>
+        <div class="fg"><label>Cidade</label>
+          <select class="fs" id="lCidade" onchange="toggleBairroLead()">
+            <option>Joinville</option><option>Araquari</option><option>Balneário Camboriú</option><option>Balneário Piçarras</option><option>Barra Velha</option><option>Campo Alegre</option><option>São Francisco do Sul</option>
+          </select>
+        </div>
+        <div class="fg" id="lBairroJoinWrap"><label>Bairros de interesse</label>
+          <select class="fs" id="lBairroJoin" multiple size="4" style="height:auto">
+            <option>Adhemar Garcia</option><option>América</option><option>Anita Garibaldi</option><option>Atiradores</option><option>Aventureiro</option><option>Boa Vista</option><option>Boehmerwald</option><option>Bom Retiro</option><option>Bucarein</option><option>Centro</option><option>Comasa</option><option>Costa e Silva</option><option>Dona Francisca</option><option>Espinheiros</option><option>Fátima</option><option>Floresta</option><option>Glória</option><option>Guanabara</option><option>Iririú</option><option>Itaum</option><option>Itinga</option><option>Jardim Iririú</option><option>Jardim Paraíso</option><option>Jardim Sofia</option><option>Jarivatuba</option><option>João Costa</option><option>Morro do Meio</option><option>Nova Brasília</option><option>Paranaguamirim</option><option>Parque Guarani</option><option>Petrópolis</option><option>Pirabeiraba</option><option>Profipo</option><option>Rio Bonito</option><option>Saguaçu</option><option>Santa Catarina</option><option>Santo Antônio</option><option>São Marcos</option><option>Ulysses Guimarães</option><option>Vila Cubatão</option><option>Vila Nova</option><option>Zona Industrial Norte</option><option>Zona Industrial Tupy</option>
+          </select>
+          <small style="color:var(--text-light);font-size:11px;">Ctrl+click para selecionar múltiplos</small>
+        </div>
+        <div class="fg hidden" id="lBairroOutroWrap"><label>Bairro / Região</label><input type="text" class="fi" id="lBairroOutro" maxlength="60"></div>
+        <div class="fg"><label>Orçamento mínimo</label><input type="number" class="fi" id="lOrcMin" placeholder="R$"></div>
+        <div class="fg"><label class="req">Orçamento máximo</label><input type="number" class="fi" id="lOrcMax" placeholder="R$"></div>
+        <div class="fg"><label class="req">Status</label>
+          <select class="fs" id="lStatus" onchange="toggleVisitaLead()">
+            <option>Novo</option><option>Contatado</option><option>Visita Agendada</option><option>Visitou Imóvel</option><option>Proposta Feita</option><option>Negociação</option><option>Vendido</option><option>Descartado</option>
+          </select>
+        </div>
+        <div class="fg"><label>Origem</label>
+          <select class="fs" id="lOrigem" onchange="toggleOrigemDetalhe()">
+            <option>Plantão</option><option>Indicação Perfil</option><option>Patrocinado Próprio</option><option>Instagram</option><option>Facebook</option><option>Indicação Cliente</option><option>Indicação Amigo</option><option>Folder</option><option>Cliente Captação</option><option>Lista de Construtora</option><option>Lista Perfil Imóveis</option><option>Outro</option>
+          </select>
+        </div>
+        <div class="fg hidden" id="lUnivenWrap"><label>Código do imóvel de interesse (Univen)</label><input type="text" class="fi" id="lUniven" maxlength="15" placeholder="UNV-XXXXX"></div>
+        <div class="fg hidden" id="lOrigemDetalheWrap"><label>Detalhar origem</label><input type="text" class="fi" id="lOrigemDetalhe" placeholder="Especifique"></div>
+        <div class="fg hidden" id="lVisitaDataWrap"><label>Data da visita</label><input type="date" class="fi" id="lVisitaData"></div>
+        <div class="fg hidden" id="lVisitaHoraWrap"><label>Horário da visita</label><input type="time" class="fi" id="lVisitaHora"></div>
+        <div class="fg"><label>Data do 1º contato</label><input type="date" class="fi" id="lDataContato"></div>
+        <div class="fg"><label>Horário do 1º contato</label>
+          <select class="fs" id="lHorarioContato">
+            <option value="">— Selecionar —</option>
+          </select>
+        </div>
+        <div class="fg"><label>Canal do 1º contato</label>
+          <select class="fs" id="lCanalContato">
+            <option>Ligação</option><option>WhatsApp</option><option>E-mail Marketing</option><option>Visita</option><option>Outro</option>
+          </select>
+        </div>
+        <div class="fg"><label>Resultado do 1º contato</label>
+          <select class="fs" id="lResultadoContato">
+            <option>Não atendeu</option><option>Não respondeu</option><option>Atendeu / Respondeu</option><option>Agendou visita</option><option>Sem interesse</option>
+          </select>
+        </div>
+        <input type="hidden" id="lProximoContato">
+        <div class="fg"><label>Urgência</label><select class="fs" id="lUrgencia"><option>Baixa</option><option selected>Média</option><option>Alta</option></select></div>
+        <div class="fg"><label>Financiamento?</label><select class="fs" id="lFinanciamento"><option value="false">Não</option><option value="true">Sim</option></select></div>
+        <div class="fg"><label>Preferência</label><select class="fs" id="lPreferencia"><option>Pronto</option><option>Na Planta</option><option>Ambos</option></select></div>
+        <div class="fg"><label>Permuta?</label><select class="fs" id="lPermuta" onchange="togglePermuta()"><option value="false">Não</option><option value="true">Sim</option></select></div>
+        <div class="fg hidden" id="lPermutaTipoWrap"><label>Tipo do bem</label>
+          <select class="fs" id="lPermutaTipo" onchange="togglePermutaBairro()">
+            <option>Veículo</option><option>Apartamento</option><option>Casa</option><option>Terreno</option><option>Outro</option>
+          </select>
+        </div>
+        <div class="fg hidden" id="lPermutaBairroWrap"><label>Bairro do bem</label><input type="text" class="fi" id="lPermutaBairro" placeholder="Bairro"></div>
+        <div class="fg hidden" id="lPermutaOutroWrap"><label>Descrever o bem</label><input type="text" class="fi" id="lPermutaOutro"></div>
+        <div class="fg hidden" id="lPermutaValorWrap"><label>Valor estimado do bem</label><input type="number" class="fi" id="lPermutaValor" placeholder="R$"></div>
+        <div class="fg"><label>Houve retorno?</label><select class="fs" id="lRetorno"><option value="false">Não</option><option value="true">Sim</option></select></div>
+        <div class="fg full"><label>Observações</label><textarea class="ft" id="lObs" placeholder="Anotações sobre o lead..."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('mLead')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarLead()">Registrar Lead</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALHE LEAD -->
+<div class="modal-bg" id="mLeadDetalhe">
+  <div class="modal modal-lg">
+    <div class="modal-hdr"><h3 id="mLeadDetNome">Lead</h3><button class="modal-close" onclick="closeModal('mLeadDetalhe')">✕</button></div>
+    <div class="modal-body" id="mLeadDetBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('mLeadDetalhe')">Fechar</button>
+      <button class="btn btn-primary" id="mLeadDetEdit">✏️ Editar Lead</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CAPTAÇÃO -->
+<div class="modal-bg" id="mCaptacao">
+  <div class="modal modal-lg">
+    <div class="modal-hdr"><h3 id="mCaptTitle">+ Nova Captação</h3><button class="modal-close" onclick="closeModal('mCaptacao')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="cId">
+      <div class="form-grid">
+        <div class="fg full"><label class="req">Nome do proprietário</label><input type="text" class="fi" id="cNome"></div>
+        <div class="fg"><label>Telefone</label><input type="text" class="fi" id="cTel" placeholder="(47) 99999-9999"></div>
+        <div class="fg"><label>E-mail</label><input type="email" class="fi" id="cEmail" maxlength="50"></div>
+        <div class="fg"><label>Código Univen</label><input type="text" class="fi" id="cUniven" maxlength="15" placeholder="UNV-XXXXX"></div>
+        <div class="fg"><label>Tipo de imóvel</label>
+          <select class="fs" id="cTipo" onchange="toggleCaptacaoFields()">
+            <option>Apartamento</option><option>Casa</option><option>Sobrado</option><option>Sobrado Geminado</option><option>Terreno</option><option>Sala Comercial</option><option>Galpão</option><option>Outro</option>
+          </select>
+        </div>
+        <div class="fg"><label>Cidade</label>
+          <select class="fs" id="cCidade" onchange="toggleBairroCapt()">
+            <option>Joinville</option><option>Araquari</option><option>Balneário Camboriú</option><option>Balneário Piçarras</option><option>Barra Velha</option><option>Campo Alegre</option><option>São Francisco do Sul</option>
+          </select>
+        </div>
+        <div class="fg" id="cBairroWrap"><label>Bairro</label>
+          <select class="fs" id="cBairro">
+            <option>Adhemar Garcia</option><option>América</option><option>Anita Garibaldi</option><option>Atiradores</option><option>Aventureiro</option><option>Boa Vista</option><option>Boehmerwald</option><option>Bom Retiro</option><option>Bucarein</option><option>Centro</option><option>Comasa</option><option>Costa e Silva</option><option>Dona Francisca</option><option>Espinheiros</option><option>Fátima</option><option>Floresta</option><option>Glória</option><option>Guanabara</option><option>Iririú</option><option>Itaum</option><option>Itinga</option><option>Jardim Iririú</option><option>Jardim Paraíso</option><option>Jardim Sofia</option><option>Jarivatuba</option><option>João Costa</option><option>Morro do Meio</option><option>Nova Brasília</option><option>Paranaguamirim</option><option>Parque Guarani</option><option>Petrópolis</option><option>Pirabeiraba</option><option>Profipo</option><option>Rio Bonito</option><option>Saguaçu</option><option>Santa Catarina</option><option>Santo Antônio</option><option>São Marcos</option><option>Ulysses Guimarães</option><option>Vila Cubatão</option><option>Vila Nova</option><option>Zona Industrial Norte</option><option>Zona Industrial Tupy</option>
+          </select>
+        </div>
+        <div class="fg hidden" id="cBairroOutroWrap"><label>Bairro / Região</label><input type="text" class="fi" id="cBairroOutro" maxlength="60"></div>
+        <div class="fg"><label>Valor de venda (com comissão)</label><input type="number" class="fi" id="cValor" placeholder="R$"></div>
+        <div class="fg" id="cQuartosWrap"><label>Quartos</label>
+          <select class="fs" id="cQuartos" onchange="toggleCaptQuartosOutro()">
+            <option>1 Dormitório</option><option>2 Dormitórios</option><option>Suíte + 1</option><option>Suíte + 2</option><option>2 Suítes</option><option>3 Suítes</option><option>Outro</option>
+          </select>
+        </div>
+        <div class="fg hidden" id="cQuartosOutroWrap"><label>Especificar dormitório</label><input type="text" class="fi" id="cQuartosOutro" placeholder="Descreva..."></div>
+        <div class="fg"><label>Área m²</label><input type="number" class="fi" id="cArea" placeholder="ex: 85"></div>
+        <div class="fg" id="cVagasWrap"><label>Vagas na garagem</label>
+          <select class="fs" id="cVagas"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select>
+        </div>
+        <div class="fg"><label>Mobiliado?</label><select class="fs" id="cMobiliado"><option>Não mobiliado</option><option>Semi-mobiliado</option><option>Mobiliado</option></select></div>
+        <div class="fg"><label>Estuda permuta?</label><select class="fs" id="cPermuta"><option value="false">Não</option><option value="true">Sim</option></select></div>
+        <div class="fg"><label>Status</label>
+          <select class="fs" id="cStatus">
+            <option>Novo</option><option>Contatado</option><option>Visita Agendada</option><option>Visitou Imóvel</option><option>Proposta Feita</option><option>Negociação</option><option>Captado</option><option>Descartado</option><option>Vendido</option>
+          </select>
+        </div>
+        <div class="fg"><label>Data da captação</label><input type="date" class="fi" id="cData"></div>
+        <div class="fg"><label>Origem</label>
+          <select class="fs" id="cOrigem" onchange="toggleCaptOrigemOutro()">
+            <option>Indicação Perfil</option><option>Indicação Amigo</option><option>Indicação Cliente</option><option>Prospecção Ativa na Rua</option><option>Folder</option><option>Facebook</option><option>OLX</option><option>Outra</option>
+          </select>
+        </div>
+        <div class="fg hidden" id="cOrigemOutroWrap"><label>Detalhar origem</label><input type="text" class="fi" id="cOrigemOutro"></div>
+        <div class="fg full"><label>Observações</label><textarea class="ft" id="cObs"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('mCaptacao')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarCaptacao()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL VENDA -->
+<div class="modal-bg" id="mVenda">
+  <div class="modal modal-lg">
+    <div class="modal-hdr"><h3 id="mVendaTitle">+ Registrar Venda</h3><button class="modal-close" onclick="closeModal('mVenda')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="vId">
+      <div class="form-grid">
+        <div class="fg full"><label class="req">Nome ou código do imóvel</label><input type="text" class="fi" id="vNome" placeholder="ex: Apto Petrópolis / UNV-00234"></div>
+        <div class="fg"><label>Tipo de imóvel</label>
+          <select class="fs" id="vTipo"><option>Apartamento</option><option>Casa</option><option>Sobrado</option><option>Terreno</option><option>Sala Comercial</option><option>Outro</option></select>
+        </div>
+        <div class="fg"><label>Cidade</label>
+          <select class="fs" id="vCidade" onchange="toggleBairroVenda()">
+            <option>Joinville</option><option>Araquari</option><option>Balneário Camboriú</option><option>Balneário Piçarras</option><option>Barra Velha</option><option>Campo Alegre</option><option>São Francisco do Sul</option>
+          </select>
+        </div>
+        <div class="fg" id="vBairroWrap"><label>Bairro</label>
+          <select class="fs" id="vBairro">
+            <option>América</option><option>Atiradores</option><option>Boa Vista</option><option>Bucarein</option><option>Centro</option><option>Glória</option><option>Petrópolis</option><option>Vila Nova</option>
+          </select>
+        </div>
+        <div class="fg hidden" id="vBairroOutroWrap"><label>Bairro / Região</label><input type="text" class="fi" id="vBairroOutro" maxlength="60"></div>
+        <div class="fg"><label>Data da venda</label><input type="date" class="fi" id="vData"></div>
+        <div class="fg"><label class="req">Valor total do imóvel</label><input type="number" class="fi" id="vValor" placeholder="R$" oninput="calcComissao()"></div>
+        <div class="fg"><label>Nome do comprador</label><input type="text" class="fi" id="vComprador"></div>
+        <div class="fg"><label>Nome do vendedor/proprietário</label><input type="text" class="fi" id="vVendedor"></div>
+        <div class="fg"><label>Origem do negócio</label>
+          <select class="fs" id="vOrigem" onchange="toggleVendaOrigemOutro()"><option>Plantão</option><option>Indicação Perfil</option><option>Patrocinado Próprio</option><option>Instagram</option><option>Facebook</option><option>Indicação Cliente</option><option>Indicação Amigo</option><option>Folder</option><option>Cliente Captação</option><option>Lista de Construtora</option><option>Outro</option></select>
+        </div>
+        <div class="fg hidden" id="vOrigemOutroWrap"><label>Detalhar origem</label><input type="text" class="fi" id="vOrigemOutro" placeholder="Especifique"></div>
+        <div class="fg"><label>Status</label>
+          <select class="fs" id="vStatus"><option>Contrato Assinado</option><option>Escritura Feita</option><option>Comissão Recebida</option></select>
+        </div>
+        <div class="fg"><label>Data prevista comissão</label><input type="date" class="fi" id="vDataComissao"></div>
+        <div class="fg"><label>Vincular captação (Código Univen)</label><input type="text" class="fi" id="vCaptLink" placeholder="UNV-XXXXX"></div>
+      </div>
+      <div class="form-section"><div class="form-section-title">💰 Bloco de Comissão</div></div>
+      <div class="form-grid" style="margin-top:12px;">
+        <div class="fg"><label>Quem realizou a venda?</label>
+          <select class="fs" id="vQuemVendeu" onchange="toggleColega();calcComissao()">
+            <option value="eu">Eu mesma</option><option value="colega">Um colega</option>
+          </select>
+        </div>
+        <div class="fg hidden" id="vColeganWrap"><label>Nome do colega</label><input type="text" class="fi" id="vColega"></div>
+        <div class="fg"><label>Quem fez a captação?</label>
+          <select class="fs" id="vQuemCaptou" onchange="calcComissao()">
+            <option value="eu">Eu mesma</option><option value="perfil">Indicação da Perfil Imóveis</option><option value="terceiros">Terceiros</option>
+          </select>
+        </div>
+        <div class="fg"><label>Parceria com outra imobiliária?</label>
+          <select class="fs" id="vParceria" onchange="calcComissao()"><option value="false">Não</option><option value="true">Sim</option></select>
+        </div>
+        <div class="fg"><label>% de imposto a deduzir</label>
+          <input type="number" class="fi" id="vImposto" value="8" step="0.5" oninput="calcComissao()">
+        </div>
+        <div class="fg full"><label>Observações</label><textarea class="ft" id="vObs"></textarea></div>
+      </div>
+      <div class="comm-box" id="commBox">
+        <h4>💰 Cálculo de Comissão</h4>
+        <div class="comm-row"><span class="comm-label">Comissão total da imobiliária (6%)</span><span class="comm-value" id="cv1">R$ —</span></div>
+        <div class="comm-row"><span class="comm-label">Base de cálculo</span><span class="comm-value" id="cv2">R$ —</span></div>
+        <div class="comm-row"><span class="comm-label">Cenário identificado</span><span class="comm-value" id="cv3" style="font-size:11px;text-align:right;max-width:200px">—</span></div>
+        <div class="comm-row"><span class="comm-label">Sua comissão bruta</span><span class="comm-value" id="cv4">R$ —</span></div>
+        <div class="comm-row"><span class="comm-label">Imposto estimado</span><span class="comm-value" id="cv5">R$ —</span></div>
+        <div class="comm-row hl"><span class="comm-label">SUA COMISSÃO LÍQUIDA</span><span class="comm-value" id="cv6">R$ —</span></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('mVenda')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarVenda()">Registrar Venda</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PANFLETO -->
+<div class="modal-bg" id="mPanfleto">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-hdr"><h3>+ Nova Distribuição</h3><button class="modal-close" onclick="closeModal('mPanfleto')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="pId">
+      <div class="form-grid">
+        <div class="fg"><label>Data</label><input type="date" class="fi" id="pData"></div>
+        <div class="fg"><label>Cidade</label>
+          <select class="fs" id="pCidade" onchange="toggleBairroPanf()">
+            <option>Joinville</option><option>Araquari</option><option>Balneário Camboriú</option><option>Balneário Piçarras</option><option>Barra Velha</option><option>Campo Alegre</option><option>São Francisco do Sul</option>
+          </select>
+        </div>
+        <div class="fg" id="pBairroWrap"><label>Bairro</label>
+          <select class="fs" id="pBairro">
+            <option>Adhemar Garcia</option><option>América</option><option>Anita Garibaldi</option><option>Atiradores</option><option>Aventureiro</option><option>Boa Vista</option><option>Boehmerwald</option><option>Bom Retiro</option><option>Bucarein</option><option>Centro</option><option>Comasa</option><option>Costa e Silva</option><option>Dona Francisca</option><option>Espinheiros</option><option>Fátima</option><option>Floresta</option><option>Glória</option><option>Guanabara</option><option>Iririú</option><option>Itaum</option><option>Itinga</option><option>Jardim Iririú</option><option>Jardim Paraíso</option><option>Jardim Sofia</option><option>Jarivatuba</option><option>João Costa</option><option>Morro do Meio</option><option>Nova Brasília</option><option>Paranaguamirim</option><option>Parque Guarani</option><option>Petrópolis</option><option>Pirabeiraba</option><option>Profipo</option><option>Rio Bonito</option><option>Saguaçu</option><option>Santa Catarina</option><option>Santo Antônio</option><option>São Marcos</option><option>Ulysses Guimarães</option><option>Vila Cubatão</option><option>Vila Nova</option><option>Zona Industrial Norte</option><option>Zona Industrial Tupy</option>
+          </select>
+        </div>
+        <div class="fg hidden" id="pBairroOutroWrap"><label>Bairro / Região</label><input type="text" class="fi" id="pBairroOutro" maxlength="60"></div>
+        <div class="fg full"><label class="req">Quantidade de panfletos</label><input type="number" class="fi" id="pQtd" placeholder="ex: 200"></div>
+        <div class="fg full"><label>Observações</label><textarea class="ft" id="pObs" style="min-height:60px"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('mPanfleto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarPanfleto()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TENTATIVA -->
+<div class="modal-bg" id="mTentativa">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-hdr"><h3>📞 Registrar Tentativa de Contato</h3><button class="modal-close" onclick="closeModal('mTentativa')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="tLeadId">
+      <div id="tLeadNomeLabel" style="background:var(--off-white);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:500;color:var(--navy);border:1px solid var(--border);"></div>
+      <div class="form-grid">
+        <div class="fg"><label>Data</label><input type="date" class="fi" id="tData"></div>
+        <div class="fg"><label>Horário</label>
+          <select class="fs" id="tHorario">
+            <option value="">— Selecionar —</option>
+          </select>
+        </div>
+        <div class="fg"><label>Canal de contato</label>
+          <select class="fs" id="tTipo">
+            <option>Ligação</option>
+            <option>WhatsApp</option>
+            <option>E-mail Marketing</option>
+            <option>Visita</option>
+            <option>Outro</option>
+          </select>
+        </div>
+        <div class="fg full"><label>Resultado</label>
+          <select class="fs" id="tResultado">
+            <option>Não atendeu</option>
+            <option>Não respondeu</option>
+            <option>Atendeu / Respondeu</option>
+            <option>Agendou visita</option>
+            <option>Sem interesse</option>
+          </select>
+        </div>
+        <div class="fg full">
+          <label>Próximo contato previsto</label>
+          <input type="date" class="fi" id="tProximoContato">
+          <small style="color:var(--text-light);font-size:11px;margin-top:4px;display:block">Se preenchido, atualiza a data do próximo contato no lead</small>
+        </div>
+        <div class="fg full"><label>Observação</label><textarea class="ft" id="tObs" style="min-height:70px" placeholder="Ex: Ligou mas não atendeu, tentativa às 14h..."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('mTentativa')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarTentativa()">Registrar Tentativa</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DISPARO E-MAIL MARKETING -->
+<div class="modal-bg" id="mDisparo">
+  <div class="modal modal-lg">
+    <div class="modal-hdr"><h3>✉️ Registrar Disparo de E-mail</h3><button class="modal-close" onclick="closeModal('mDisparo')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="fg"><label class="req">Data do envio</label><input type="date" class="fi" id="dData"></div>
+        <div class="fg"><label>Grupo (automático)</label>
+          <select class="fs" id="dGrupo"><option value="">— Selecionar grupo —</option></select>
+        </div>
+        <div class="fg"><label class="req">Tipo</label>
+          <select class="fs" id="dTipoPlanta" onchange="toggleDisparoTipo()">
+            <option value="Pronto">Pronto</option>
+            <option value="Na Planta">Na Planta</option>
+          </select>
+        </div>
+        <div class="fg"><label>Tipo de imóvel</label>
+          <select class="fs" id="dTipoImovel">
+            <option>Apartamento</option><option>Casa</option><option>Sobrado</option><option>Sobrado Geminado</option><option>Terreno</option><option>Sala Comercial</option><option>Galpão</option><option>Outro</option>
+          </select>
+        </div>
+        <div class="fg full"><label class="req">Nome do empreendimento / lançamento</label><input type="text" class="fi" id="dEmpreendimento" placeholder="Ex: Residencial Petrópolis"></div>
+        <div class="fg"><label>Cidade</label>
+          <select class="fs" id="dCidade" onchange="toggleDisparoBairro()">
+            <option>Joinville</option><option>Araquari</option><option>Balneário Camboriú</option><option>Balneário Piçarras</option><option>Barra Velha</option><option>Campo Alegre</option><option>São Francisco do Sul</option>
+          </select>
+        </div>
+        <div class="fg" id="dBairroJoinWrap"><label>Bairro</label>
+          <select class="fs" id="dBairroJoin">
+            <option>Adhemar Garcia</option><option>América</option><option>Anita Garibaldi</option><option>Atiradores</option><option>Aventureiro</option><option>Boa Vista</option><option>Boehmerwald</option><option>Bom Retiro</option><option>Bucarein</option><option>Centro</option><option>Comasa</option><option>Costa e Silva</option><option>Dona Francisca</option><option>Espinheiros</option><option>Fátima</option><option>Floresta</option><option>Glória</option><option>Guanabara</option><option>Iririú</option><option>Itaum</option><option>Itinga</option><option>Jardim Iririú</option><option>Jardim Paraíso</option><option>Jardim Sofia</option><option>Jarivatuba</option><option>João Costa</option><option>Morro do Meio</option><option>Nova Brasília</option><option>Paranaguamirim</option><option>Parque Guarani</option><option>Petrópolis</option><option>Pirabeiraba</option><option>Profipo</option><option>Rio Bonito</option><option>Saguaçu</option><option>Santa Catarina</option><option>Santo Antônio</option><option>São Marcos</option><option>Ulysses Guimarães</option><option>Vila Cubatão</option><option>Vila Nova</option><option>Zona Industrial Norte</option><option>Zona Industrial Tupy</option>
+          </select>
+        </div>
+        <div class="fg hidden" id="dBairroOutroWrap"><label>Bairro / Região</label><input type="text" class="fi" id="dBairroOutro" maxlength="60"></div>
+
+        <!-- Campos Na Planta -->
+        <div class="fg hidden" id="dConstutoraWrap"><label>Construtora</label>
+          <select class="fs" id="dConstrutora" onchange="toggleDisparoConstrutora()">
+            <option>Inovar Incorporadora e Construtora</option>
+            <option>Veja</option>
+            <option>Plaenge</option>
+            <option>Viplan Construtora</option>
+            <option>DAXO Incorporadora</option>
+            <option>H. Marcatto</option>
+            <option>Rottas Construtora</option>
+            <option>Construtora e Incorporadora Gomes</option>
+            <option>Halsten Incorporadora</option>
+            <option>VSK Construtora</option>
+            <option>Vanguard</option>
+            <option>Hacasa Empreendimentos</option>
+            <option>Outra</option>
+          </select>
+        </div>
+        <div class="fg hidden" id="dConstutoraOutroWrap"><label>Nome da construtora</label><input type="text" class="fi" id="dConstutoraOutro" placeholder="Nome da construtora"></div>
+        <div class="fg hidden" id="dDataEntregaWrap"><label>Data entrega prevista</label><input type="date" class="fi" id="dDataEntrega"></div>
+
+        <!-- Campo Pronto -->
+        <div class="fg hidden" id="dCodigoUnivenWrap"><label>Código do imóvel no Univen</label><input type="text" class="fi" id="dCodigoUniven" placeholder="UNV-XXXXX"></div>
+
+        <div class="fg" id="dValorWrap"><label id="dValorLabel">Valor do imóvel</label><input type="number" class="fi" id="dValor" placeholder="R$"></div>
+        <div class="fg full"><label>Observações</label><textarea class="ft" id="dObs" style="min-height:60px" placeholder="Opcional..."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('mDisparo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarDisparoEmail()">Registrar Disparo</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMAR EXCLUSÃO -->
+<div class="modal-bg" id="mConfirm">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-hdr"><h3>Confirmar exclusão</h3><button class="modal-close" onclick="closeModal('mConfirm')">✕</button></div>
+    <div class="modal-body"><p style="font-size:14px;color:var(--text-mid)">Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.</p></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('mConfirm')">Cancelar</button>
+      <button class="btn btn-danger" id="confirmDeleteBtn">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mobile-nav">
+  <div class="mobile-nav-items">
+    <div class="mobile-nav-item active" id="mn-dashboard" onclick="goTab('dashboard');setMobileActive('dashboard')">
+      <span class="mn-icon">📊</span><span class="mobile-nav-label">Dashboard</span>
+    </div>
+    <div class="mobile-nav-item" id="mn-leads" onclick="goTab('leads');setMobileActive('leads')">
+      <span class="mn-icon">👥</span><span class="mobile-nav-label">Leads</span>
+    </div>
+    <div class="mobile-nav-item" id="mn-captacoes" onclick="goTab('captacoes');setMobileActive('captacoes')">
+      <span class="mn-icon">🏠</span><span class="mobile-nav-label">Captações</span>
+    </div>
+    <div class="mobile-nav-item" id="mn-vendas" onclick="goTab('vendas');setMobileActive('vendas')">
+      <span class="mn-icon">💰</span><span class="mobile-nav-label">Vendas</span>
+    </div>
+    <div class="mobile-nav-item" id="mn-more" onclick="toggleMobileMore()">
+      <span class="mn-icon">☰</span><span class="mobile-nav-label">Mais</span>
+    </div>
+  </div>
+</nav>
+
+<!-- DRAWER LATERAL MOBILE -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="mobileDrawer">
+  <div class="drawer-header">
+    <div>
+      <h1>Bianca Iéck</h1>
+      <p>Acompanhamento de KPIs</p>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-nav">
+    <div class="drawer-nav-item active" id="dn-dashboard" onclick="drawerGoTab('dashboard')"><span class="dn-icon">📊</span>Dashboard</div>
+    <div class="drawer-nav-item" id="dn-leads" onclick="drawerGoTab('leads')"><span class="dn-icon">👥</span>Leads</div>
+    <div class="drawer-nav-item" id="dn-captacoes" onclick="drawerGoTab('captacoes')"><span class="dn-icon">🏠</span>Captações</div>
+    <div class="drawer-nav-item" id="dn-vendas" onclick="drawerGoTab('vendas')"><span class="dn-icon">💰</span>Vendas</div>
+    <div class="drawer-nav-item" id="dn-panfletagem" onclick="drawerGoTab('panfletagem')"><span class="dn-icon">📄</span>Panfletagem</div>
+    <div class="drawer-nav-item" id="dn-metas" onclick="drawerGoTab('metas')"><span class="dn-icon">🎯</span>Metas</div>
+    <div class="drawer-nav-item" id="dn-email" onclick="drawerGoTab('email')"><span class="dn-icon">✉️</span>E-mail Marketing</div>
+    <div class="drawer-nav-item" id="dn-analises" onclick="drawerGoTab('analises')"><span class="dn-icon">📈</span>Análises</div>
+  </div>
+  <div class="drawer-footer">
+    <button onclick="exportarDados();closeDrawer()">⬇ Exportar Dados</button>
+  </div>
+</div>
+
+
+<div class="mobile-more-overlay" id="mobileMoreOverlay" onclick="closeMobileMore()"></div>
+<div class="mobile-more-sheet" id="mobileMoreSheet" style="display:none">
+  <h4>Mais opções</h4>
+  <div class="mobile-more-grid">
+    <div class="mobile-more-item" onclick="goTab('panfletagem');setMobileActive('panfletagem');closeMobileMore()">
+      <span class="mn-icon">📄</span> Panfletagem
+    </div>
+    <div class="mobile-more-item" onclick="goTab('metas');setMobileActive('metas');closeMobileMore()">
+      <span class="mn-icon">🎯</span> Metas
+    </div>
+    <div class="mobile-more-item" onclick="goTab('email');setMobileActive('email');closeMobileMore()">
+      <span class="mn-icon">✉️</span> E-mail Mkt
+    </div>
+    <div class="mobile-more-item" onclick="goTab('analises');setMobileActive('analises');closeMobileMore()">
+      <span class="mn-icon">📈</span> Análises
+    </div>
+    <div class="mobile-more-item" onclick="exportarDados();closeMobileMore()" style="grid-column:1/-1">
+      <span class="mn-icon">⬇</span> Exportar Dados
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// BIANCA IÉCK — app.js
+// Conexão com Supabase + toda a lógica do aplicativo
+// ═══════════════════════════════════════════════════
+
+const SUPABASE_URL = 'https://rvepfeghjwfojgafhpwy.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_BEr5rljMJSX5GHQOMZrEEg_xpqidTJe';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── Estado global ──────────────────────────────────
+let allLeads = [], allCaptacoes = [], allVendas = [], allPanfleta = [], allMetas = [], allDisparos = [];
+let currentTab = 'dashboard';
+let editingId = null;
+let deleteCallback = null;
+let emLeadsFiltrados = [];
+let chartsDrawn = {};
+let hoje = new Date().toISOString().split('T')[0];
+
+// ── Helpers ────────────────────────────────────────
+const fmt = n => n == null ? '—' : 'R$ ' + Number(n).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+const fmtDate = d => d ? d.split('-').reverse().join('/') : '—';
+const v = id => document.getElementById(id);
+const show = (id, s=true) => { const el=v(id); if(el) el.classList.toggle('hidden', !s); };
+
+function toast(msg, ok=true) {
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:20px;right:20px;z-index:9999;background:${ok?'#1A2744':'#D94040'};color:white;padding:12px 20px;border-radius:10px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,0.2);animation:slideIn 0.3s ease;`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+function openModal(id) { v(id).classList.add('open'); }
+function closeModal(id) { v(id).classList.remove('open'); editingId = null; }
+
+document.querySelectorAll('.modal-bg').forEach(m => {
+  m.addEventListener('click', e => { if(e.target === m) m.classList.remove('open'); });
+});
+
+// ── Navegação ──────────────────────────────────────
+const pageInfo = {
+  dashboard: ['Dashboard','Visão geral dos indicadores'],
+  leads: ['Leads','Controle de leads de compra'],
+  captacoes: ['Captações','Acompanhamento de captação de imóveis'],
+  vendas: ['Vendas','Acompanhamento de vendas, comissões e faturamento'],
+  panfletagem: ['Panfletagem','Controle de distribuição por bairro'],
+  metas: ['Metas','Planejamento semanal e mensal'],
+  email: ['E-mail Marketing','Segmentação de leads e controle de disparos'],
+  analises: ['Análises e Indicadores','Análise de desempenho'],
+};
+
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const tab = item.dataset.tab;
+    goTab(tab);
+  });
+});
+
+function goTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  v('tab-'+tab).classList.add('active');
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+  v('pageTitle').textContent = pageInfo[tab][0];
+  v('pageSubtitle').textContent = pageInfo[tab][1];
+
+  if(tab==='leads') renderLeads();
+  if(tab==='captacoes') renderCaptacoes();
+  if(tab==='vendas') renderVendas();
+  if(tab==='panfletagem') renderPanfleta();
+  if(tab==='metas') initMetas();
+  if(tab==='email') renderDisparos();
+  if(tab==='analises') loadAnalises('leads');
+  if(tab==='dashboard') loadDashboard();
+}
+
+function switchInner(btn, section) {
+  const parent = btn.closest('.tab-panel');
+  parent.querySelectorAll('.inner-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ['em-seg','em-grupos','em-hist','an-leads','an-capt','an-vendas','an-panf','an-estrategia'].forEach(s => {
+    const el = v(s); if(el) el.style.display='none';
+  });
+  v(section).style.display = 'block';
+}
+
+// ── Carregar dados iniciais ────────────────────────
+async function init() {
+  await Promise.all([
+    loadLeads(), loadCaptacoes(), loadVendas(), loadPanfleta(), loadMetas(), loadDisparos()
+  ]);
+  loadDashboard();
+  initNotificacao();
+  initDates();
+}
+
+async function loadLeads() {
+  const {data} = await sb.from('leads').select('*').order('created_at', {ascending:false});
+  allLeads = data || [];
+}
+async function loadCaptacoes() {
+  const {data} = await sb.from('captacoes').select('*').order('created_at', {ascending:false});
+  allCaptacoes = data || [];
+}
+async function loadVendas() {
+  const {data} = await sb.from('vendas').select('*').order('data_venda', {ascending:false});
+  allVendas = data || [];
+}
+async function loadPanfleta() {
+  const {data} = await sb.from('panfletagem').select('*').order('data_distribuicao', {ascending:false});
+  allPanfleta = data || [];
+}
+async function loadMetas() {
+  const {data} = await sb.from('metas').select('*');
+  allMetas = data || [];
+}
+async function loadDisparos() {
+  const {data} = await sb.from('disparos_email').select('*').order('data_envio', {ascending:false});
+  allDisparos = data || [];
+}
+
+// ── Helpers de horário ─────────────────────────────
+function buildHorarioOptions() {
+  const opts = ['<option value="">— Selecionar —</option>'];
+  for(let h = 7; h <= 21; h++) {
+    opts.push(`<option value="${String(h).padStart(2,'0')}:00">${String(h).padStart(2,'0')}:00</option>`);
+    opts.push(`<option value="${String(h).padStart(2,'0')}:30">${String(h).padStart(2,'0')}:30</option>`);
+  }
+  opts.push('<option value="22:00">22:00</option>');
+  return opts.join('');
+}
+
+// ── Datas iniciais nos formulários ─────────────────
+function initDates() {
+  ['lDataContato','cData','pData','vData','emData'].forEach(id => {
+    const el = v(id); if(el) el.value = hoje;
+  });
+  // Preencher selects de horário
+  const horaHtml = buildHorarioOptions();
+  ['lHorarioContato','tHorario'].forEach(id => {
+    const el = v(id); if(el) el.innerHTML = horaHtml;
+  });
+}
+
+// ── NOTIFICAÇÃO ────────────────────────────────────
+function initNotificacao() {
+  const atrasados = allLeads.filter(l => l.data_proximo_contato && l.data_proximo_contato < hoje && !l.contato_encerrado).length;
+  const deHoje = allLeads.filter(l => l.data_proximo_contato === hoje && !l.contato_encerrado).length;
+  if(atrasados > 0 || deHoje > 0) {
+    v('notifText').innerHTML = `Você tem <strong>${deHoje} leads</strong> para contatar hoje e <strong>${atrasados} em atraso</strong>.`;
+    v('notifBanner').classList.add('show');
+    setTimeout(() => v('notifBanner').classList.remove('show'), 8000);
+  }
+}
+
+// ── DASHBOARD ──────────────────────────────────────
+function loadDashboard() {
+  const agora = new Date();
+  const mesAtual = agora.getMonth();
+  const anoAtual = agora.getFullYear();
+  const inicioMes = `${anoAtual}-${String(mesAtual+1).padStart(2,'0')}-01`;
+  const hoje2 = hoje;
+  const inicioSem = getInicioSemana(agora);
+
+  // Tentativas do mês (contatos)
+  const tentativasDoMes = allLeads.reduce((acc, l) => acc, 0); // calculado via query abaixo
+
+  // Leads contatados (tentativas) no mês
+  sb.from('tentativas_contato').select('*').gte('data_contato', inicioMes).then(({data}) => {
+    const tent = data || [];
+    const semData = getInicioSemana(agora);
+    const tentSem = tent.filter(t => t.data_contato >= semData);
+    v('dLeadsMes').textContent = tent.length;
+    v('dLeadsSem').textContent = tentSem.length;
+  });
+
+  // Captações do mês
+  const captMes = allCaptacoes.filter(c => c.data_captacao >= inicioMes);
+  v('dCaptMes').textContent = captMes.length;
+
+  // Vendas do mês
+  const vendasMes = allVendas.filter(v2 => v2.data_venda >= inicioMes);
+  const totalValorVendas = vendasMes.reduce((a,v2) => a+(v2.valor_imovel||0), 0);
+  const totalBruta = vendasMes.reduce((a,v2) => a+(v2.comissao_bruta||0), 0);
+  const totalLiquida = vendasMes.reduce((a,v2) => a+(v2.comissao_liquida||0), 0);
+  v('dVendasMes').textContent = vendasMes.length;
+  v('dVendasValor').textContent = fmt(totalValorVendas);
+  v('dComissaoLiq').textContent = fmt(totalLiquida);
+  v('dComissaoBruta').textContent = fmt(totalBruta);
+
+  // Comissões a receber
+  const d30 = new Date(agora); d30.setDate(d30.getDate()+30);
+  const d60 = new Date(agora); d60.setDate(d60.getDate()+60);
+  const d90 = new Date(agora); d90.setDate(d90.getDate()+90);
+  const fmt30 = d30.toISOString().split('T')[0];
+  const fmt60 = d60.toISOString().split('T')[0];
+  const fmt90 = d90.toISOString().split('T')[0];
+  const r30 = allVendas.filter(vv => vv.data_prevista_comissao && vv.data_prevista_comissao <= fmt30 && vv.status !== 'Comissão Recebida').reduce((a,vv)=>a+(vv.comissao_liquida||0),0);
+  const r60 = allVendas.filter(vv => vv.data_prevista_comissao && vv.data_prevista_comissao <= fmt60 && vv.data_prevista_comissao > fmt30 && vv.status !== 'Comissão Recebida').reduce((a,vv)=>a+(vv.comissao_liquida||0),0);
+  const r90 = allVendas.filter(vv => vv.data_prevista_comissao && vv.data_prevista_comissao <= fmt90 && vv.data_prevista_comissao > fmt60 && vv.status !== 'Comissão Recebida').reduce((a,vv)=>a+(vv.comissao_liquida||0),0);
+  v('recv30').textContent = fmt(r30);
+  v('recv60').textContent = fmt(r60);
+  v('recv90').textContent = fmt(r90);
+
+  // Funil
+  const totalLeads = allLeads.length;
+  const visitas = allLeads.filter(l => ['Visita Agendada','Visitou Imóvel','Proposta Feita','Negociação','Vendido'].includes(l.status)).length;
+  const propostas = allLeads.filter(l => ['Proposta Feita','Negociação','Vendido'].includes(l.status)).length;
+  const vendidos = allLeads.filter(l => l.status==='Vendido').length;
+  if(totalLeads > 0) {
+    v('fLeads').textContent = `${totalLeads} leads`;
+    v('fVisitas').textContent = `${visitas} visitas`;
+    v('fVisitas').style.width = Math.max(10, (visitas/totalLeads)*100)+'%';
+    v('fPropostas').textContent = `${propostas} propostas`;
+    v('fPropostas').style.width = Math.max(8, (propostas/totalLeads)*100)+'%';
+    v('fVendas').textContent = `${vendidos} vendas`;
+    v('fVendas').style.width = Math.max(5, (vendidos/totalLeads)*100)+'%';
+  }
+
+  // Próximos contatos
+  const atrasados = allLeads.filter(l => l.data_proximo_contato && l.data_proximo_contato < hoje && !l.contato_encerrado);
+  const deHoje = allLeads.filter(l => l.data_proximo_contato === hoje && !l.contato_encerrado);
+  const amanha = new Date(agora); amanha.setDate(amanha.getDate()+1);
+  const amanhaStr = amanha.toISOString().split('T')[0];
+  const deAmanha = allLeads.filter(l => l.data_proximo_contato === amanhaStr && !l.contato_encerrado);
+  let html = '';
+  atrasados.slice(0,2).forEach(l => html += `<div class="alert-item r"><div><div class="alert-name">${l.nome}</div><div class="alert-info">Atrasado · ${l.tipo_imovel||''}</div></div><span class="badge badge-red">🔴 Atrasado</span></div>`);
+  deHoje.slice(0,2).forEach(l => html += `<div class="alert-item y"><div><div class="alert-name">${l.nome}</div><div class="alert-info">Hoje · ${l.tipo_imovel||''}</div></div><span class="badge badge-yellow">🟡 Hoje</span></div>`);
+  deAmanha.slice(0,1).forEach(l => html += `<div class="alert-item b"><div><div class="alert-name">${l.nome}</div><div class="alert-info">Amanhã · ${l.tipo_imovel||''}</div></div><span class="badge badge-blue">🔵 Amanhã</span></div>`);
+  if(!html) html = '<div class="empty"><div class="empty-icon">✅</div>Nenhum contato pendente!</div>';
+  v('dashContatos').innerHTML = html;
+
+  // Metas semana
+  renderDashMetas();
+
+  // Gráficos dashboard
+  drawDashCharts();
+}
+
+function getInicioSemana(d) {
+  // Usa a string de data local (YYYY-MM-DD) para evitar bugs de fuso horário
+  const dateStr = [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-');
+  // Busca na lista de semanas pré-calculadas qual contém essa data
+  buildMetaSemanas();
+  const sem = allMetaSemanas.find(s => s.inicio <= dateStr && s.fim >= dateStr);
+  return sem ? sem.inicio : dateStr;
+}
+
+function renderDashMetas() {
+  const semInicio = getInicioSemana(new Date());
+  const meta = allMetas.find(m => m.semana_inicio === semInicio) || {};
+  const sem = allMetaSemanas.find(s => s.inicio === semInicio);
+  const fimStr = sem ? sem.fim : semInicio;
+
+  sb.from('tentativas_contato').select('*').gte('data_contato', semInicio).lte('data_contato', fimStr).then(({data}) => {
+    const contatos = (data||[]).length;
+    const captSem = allCaptacoes.filter(c => c.data_captacao >= semInicio && c.data_captacao <= fimStr).length;
+    const panfSem = allPanfleta.filter(p => p.data_distribuicao >= semInicio && p.data_distribuicao <= fimStr).reduce((a,p)=>a+(p.quantidade||0),0);
+
+    const items = [
+      {label:'Contatos', real:contatos, meta:meta.meta_contatos||0},
+      {label:'Captações', real:captSem, meta:meta.meta_captacoes||0},
+      {label:'Panfletos', real:panfSem, meta:meta.meta_panfletos||0},
+    ];
+
+    if(!meta.meta_contatos && !meta.meta_captacoes && !meta.meta_panfletos) {
+      v('dashMetas').innerHTML = '<div class="empty">Defina metas na aba Metas</div>';
+      return;
+    }
+
+    let html = '';
+    items.forEach(i => {
+      const pct = i.meta > 0 ? Math.min(100, Math.round((i.real/i.meta)*100)) : 0;
+      const cls = pct >= 100 ? 'g' : pct >= 50 ? 'y' : 'r';
+      html += `<div class="meta-item">
+        <div class="meta-header"><span class="meta-name">${i.label}</span><span class="meta-pct ${cls}">${pct}% — ${i.real}/${i.meta||'—'}</span></div>
+        <div class="progress-bar"><div class="progress-fill ${cls}" style="width:${pct}%"></div></div>
+      </div>`;
+    });
+    v('dashMetas').innerHTML = html;
+  });
+}
+
+let dashChartsDrawn = false;
+function drawDashCharts() {
+  if(dashChartsDrawn) return;
+  dashChartsDrawn = true;
+
+  const meses = getLast6Months();
+
+  // ── Gráfico 1: Contatos Realizados vs Meta — últimas 6 semanas ──
+  sb.from('tentativas_contato').select('data_contato').then(({data}) => {
+    const tent = data || [];
+
+    // Montar últimas 6 semanas usando allMetaSemanas (evita bug de fuso horário)
+    buildMetaSemanas();
+    const hojeStr = [new Date().getFullYear(), String(new Date().getMonth()+1).padStart(2,'0'), String(new Date().getDate()).padStart(2,'0')].join('-');
+    const idxAtual = allMetaSemanas.findIndex(s => s.inicio <= hojeStr && s.fim >= hojeStr);
+    const semanas = [];
+    for(let i=5; i>=0; i--) {
+      const idx = idxAtual - i;
+      if(idx < 0) { semanas.push({label:'—', real:0, meta:0}); continue; }
+      const s = allMetaSemanas[idx];
+      const [,m,d] = s.inicio.split('-');
+      const label = `${parseInt(d)}/${parseInt(m)}`;
+      const contatosSem = tent.filter(t=>t.data_contato>=s.inicio && t.data_contato<=s.fim).length;
+      const meta = allMetas.find(m=>m.semana_inicio===s.inicio);
+      semanas.push({label, real:contatosSem, meta:meta?.meta_contatos||0});
+    }
+
+    new Chart(v('chartDashContatos'), {
+      type: 'bar',
+      data: {
+        labels: semanas.map(s=>s.label),
+        datasets: [
+          {label:'Realizados', data:semanas.map(s=>s.real), backgroundColor:'#C9A84C', borderRadius:5},
+          {label:'Meta', data:semanas.map(s=>s.meta), type:'line', borderColor:'#D94040', borderDash:[5,5], fill:false, pointRadius:3, tension:0}
+        ]
+      },
+      options: chartOpts()
+    });
+
+    // ── Gráfico 3: Contatos por mês (linha) ──
+    const conts = meses.map(m => tent.filter(t=>t.data_contato&&t.data_contato.startsWith(m.key)).length);
+    new Chart(v('chartDashLeads'), {
+      type: 'line',
+      data: {
+        labels: meses.map(m=>m.label),
+        datasets: [{
+          label:'Contatos Realizados',
+          data: conts,
+          borderColor:'#C9A84C',
+          backgroundColor:'rgba(201,168,76,0.1)',
+          tension:0.4, fill:true,
+          pointBackgroundColor:'#C9A84C'
+        }]
+      },
+      options: chartOpts()
+    });
+  });
+
+  // ── Gráfico 2: Origem dos Leads (rosca) ──
+  const origens = {};
+  allLeads.forEach(l => { if(l.origem) origens[l.origem]=(origens[l.origem]||0)+1; });
+  const oks = Object.entries(origens).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  if(oks.length) {
+    new Chart(v('chartDashOrigem'), {
+      type: 'doughnut',
+      data: {
+        labels: oks.map(o=>o[0]),
+        datasets: [{
+          data: oks.map(o=>o[1]),
+          backgroundColor:['#C9A84C','#1A2744','#3A7BD5','#3AAA6A','#E8A020','#9090CC'],
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {position:'right', labels:{font:{family:'Outfit',size:11}, boxWidth:12}}
+        }
+      }
+    });
+  } else {
+    v('chartDashOrigem').closest('.card').innerHTML += '<div class="empty" style="margin-top:-10px">Cadastre leads para ver a origem</div>';
+  }
+}
+
+function getLast6Months() {
+  const result = [];
+  for(let i=5; i>=0; i--) {
+    const d = new Date();
+    d.setMonth(d.getMonth()-i);
+    result.push({
+      key: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,
+      label: d.toLocaleString('pt-BR',{month:'short',year:'2-digit'})
+    });
+  }
+  return result;
+}
+
+function chartOpts(extra={}) {
+  return {
+    responsive:true,
+    plugins:{legend:{labels:{font:{family:'Outfit',size:11},boxWidth:12}}},
+    scales:{
+      x:{grid:{display:false},ticks:{font:{family:'Outfit',size:11}}},
+      y:{grid:{color:'#F0EDE6'},ticks:{font:{family:'Outfit',size:11}}}
+    },
+    ...extra
+  };
+}
+
+// ── LEADS ──────────────────────────────────────────
+function contactBadge(lead) {
+  if(lead.contato_encerrado) return '<span class="badge badge-green">✅ Contatado</span>';
+  if(!lead.data_proximo_contato) return '<span class="badge badge-gray">—</span>';
+  if(lead.data_proximo_contato < hoje) return '<span class="badge badge-red">🔴 Atrasado</span>';
+  if(lead.data_proximo_contato === hoje) return '<span class="badge badge-yellow">🟡 Hoje</span>';
+  const amanha = new Date(); amanha.setDate(amanha.getDate()+1);
+  if(lead.data_proximo_contato === amanha.toISOString().split('T')[0]) return '<span class="badge badge-blue">🔵 Amanhã</span>';
+  return '<span class="badge badge-gray">⚪ Em dia</span>';
+}
+
+function statusPill(s) {
+  const map = {
+    'Novo':'s-novo','Contatado':'s-contatado','Visita Agendada':'s-visita',
+    'Visitou Imóvel':'s-visitou','Proposta Feita':'s-proposta','Negociação':'s-negociacao',
+    'Vendido':'s-vendido','Descartado':'s-descartado','Captado':'s-captado'
+  };
+  return `<span class="pill ${map[s]||''}">${s||'—'}</span>`;
+}
+
+function renderLeads() {
+  const search = v('leadSearch').value.toLowerCase();
+  const fStatus = v('leadFilterStatus').value;
+  const fOrigem = v('leadFilterOrigem').value;
+  const fUrg = v('leadFilterUrgencia').value;
+
+  let leads = allLeads.filter(l => {
+    if(search && !l.nome.toLowerCase().includes(search)) return false;
+    if(fStatus && l.status !== fStatus) return false;
+    if(fOrigem && l.origem !== fOrigem) return false;
+    if(fUrg) {
+      if(fUrg==='Atrasado' && !(l.data_proximo_contato < hoje && !l.contato_encerrado)) return false;
+      if(fUrg==='Hoje' && !(l.data_proximo_contato === hoje && !l.contato_encerrado)) return false;
+      if(fUrg==='Amanhã') {
+        const am = new Date(); am.setDate(am.getDate()+1);
+        if(l.data_proximo_contato !== am.toISOString().split('T')[0]) return false;
+      }
+    }
+    return true;
+  });
+
+  // Ordenar: atrasados > hoje > amanhã > resto
+  leads.sort((a,b) => {
+    const score = l => {
+      if(l.contato_encerrado) return 3;
+      if(!l.data_proximo_contato) return 2;
+      if(l.data_proximo_contato < hoje) return 0;
+      if(l.data_proximo_contato === hoje) return 0.5;
+      return 1;
+    };
+    return score(a)-score(b);
+  });
+
+  if(!leads.length) {
+    v('leadsBody').innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-icon">👥</div>Nenhum lead encontrado</div></td></tr>';
+    return;
+  }
+
+  v('leadsBody').innerHTML = leads.map(l => `
+    <tr>
+      <td><div class="td-name">${l.nome}</div><div class="td-sub">${l.telefone_principal}</div></td>
+      <td><div>${l.tipo_imovel||'—'}</div><div class="td-sub">${l.quartos||''} ${(l.bairros_interesse||[]).slice(0,1).join('')}</div></td>
+      <td>${l.orcamento_maximo ? fmt(l.orcamento_maximo) : '—'}</td>
+      <td>${statusPill(l.status)}</td>
+      <td>${contactBadge(l)}</td>
+      <td><span class="badge badge-gold">${l.origem||'—'}</span></td>
+      <td>
+        <button class="action-btn" onclick="verLead('${l.id}')" title="Ver detalhes">👁</button>
+        <button class="action-btn" onclick="abrirTentativa('${l.id}')" title="Registrar tentativa de contato" style="color:var(--gold)">📞</button>
+        <button class="action-btn" onclick="editarLead('${l.id}')" title="Editar">✏️</button>
+        <button class="action-btn del" onclick="confirmarDelete('leads','${l.id}')" title="Excluir">🗑</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function novoLead() {
+  editingId = null;
+  v('mLeadTitle').textContent = '+ Novo Lead';
+  v('lId').value = '';
+  ['lNome','lTel1','lTel2','lEmail1','lEmail2','lOrcMin','lOrcMax','lObs','lProximoContato','lPermutaBairro','lPermutaOutro','lOrigemDetalhe','lVisitaData','lVisitaHora','lPermutaValor','lBairroOutro','lUniven','lQuartosOutro'].forEach(id => { const el=v(id); if(el) el.value=''; });
+  Array.from(v('lBairroJoin').options).forEach(o => o.selected = false);
+  v('lStatus').value = 'Novo';
+  v('lTipo').value = 'Apartamento';
+  v('lCidade').value = 'Joinville';
+  v('lOrigem').value = 'Plantão';
+  v('lUrgencia').value = 'Média';
+  v('lFinanciamento').value = 'false';
+  v('lPreferencia').value = 'Pronto';
+  v('lPermuta').value = 'false';
+  v('lRetorno').value = 'false';
+  v('lDataContato').value = hoje;
+  if(v('lHorarioContato')) v('lHorarioContato').value = '';
+  if(v('lCanalContato')) v('lCanalContato').value = 'WhatsApp';
+  if(v('lResultadoContato')) v('lResultadoContato').value = 'Não atendeu';
+  toggleQuartosLead(); toggleQuartosOutroLead(); toggleBairroLead(); toggleVisitaLead(); togglePermuta(); toggleOrigemDetalhe();
+  openModal('mLead');
+}
+
+async function editarLead(id) {
+  const l = allLeads.find(x=>x.id===id);
+  if(!l) return;
+  editingId = id;
+  v('mLeadTitle').textContent = 'Editar Lead';
+  v('lId').value = id;
+  v('lNome').value = l.nome||'';
+  v('lTel1').value = l.telefone_principal||'';
+  v('lTel2').value = l.telefone_adicional||'';
+  v('lEmail1').value = l.email_principal||'';
+  v('lEmail2').value = l.email_adicional||'';
+  v('lTipo').value = l.tipo_imovel||'Apartamento';
+  v('lCidade').value = l.cidade||'Joinville';
+  v('lBairroOutro').value = l.bairro_outro||'';
+  v('lOrcMin').value = l.orcamento_minimo||'';
+  v('lOrcMax').value = l.orcamento_maximo||'';
+  v('lQuartos').value = l.quartos||'1 Dormitório';
+  v('lQuartosOutro') && (v('lQuartosOutro').value = l.quartos_outro||'');
+  v('lStatus').value = l.status||'Novo';
+  v('lOrigem').value = l.origem||'Plantão';
+  v('lOrigemDetalhe').value = l.origem_detalhe||'';
+  v('lUniven').value = l.codigo_univen_interesse||'';
+  v('lDataContato').value = l.data_contato||hoje;
+  if(v('lHorarioContato')) v('lHorarioContato').value = l.horario_contato||'';
+  if(v('lCanalContato')) v('lCanalContato').value = l.canal_primeiro_contato||'WhatsApp';
+  if(v('lResultadoContato')) v('lResultadoContato').value = l.resultado_primeiro_contato||'Não atendeu';
+  v('lProximoContato').value = l.data_proximo_contato||'';
+  v('lVisitaData').value = l.data_visita||'';
+  v('lVisitaHora').value = l.horario_visita||'';
+  v('lUrgencia').value = l.urgencia||'Média';
+  v('lFinanciamento').value = l.financiamento ? 'true' : 'false';
+  v('lPreferencia').value = l.preferencia||'Pronto';
+  v('lPermuta').value = l.permuta ? 'true' : 'false';
+  v('lPermutaTipo').value = l.permuta_tipo_bem||'Veículo';
+  v('lPermutaBairro').value = l.permuta_bairro||'';
+  v('lPermutaOutro').value = l.permuta_tipo_outro||'';
+  v('lPermutaValor').value = l.permuta_valor||'';
+  v('lRetorno').value = l.retorno ? 'true' : 'false';
+  v('lObs').value = l.observacoes||'';
+  if(l.bairros_interesse) {
+    Array.from(v('lBairroJoin').options).forEach(o => o.selected = l.bairros_interesse.includes(o.value));
+  }
+  toggleQuartosLead(); toggleQuartosOutroLead(); toggleBairroLead(); toggleVisitaLead(); togglePermuta(); togglePermutaBairro(); toggleOrigemDetalhe();
+  openModal('mLead');
+}
+
+async function salvarLead() {
+  const nome = v('lNome').value.trim();
+  const tel = v('lTel1').value.trim();
+  if(!nome || !tel) { toast('Preencha nome e telefone!', false); return; }
+
+  const bairros = Array.from(v('lBairroJoin').selectedOptions).map(o=>o.value);
+  const cidade = v('lCidade').value;
+  const tipo = v('lTipo').value;
+  const permuta = v('lPermuta').value === 'true';
+
+  const payload = {
+    nome, telefone_principal: tel,
+    telefone_adicional: v('lTel2').value||null,
+    email_principal: v('lEmail1').value||null,
+    email_adicional: v('lEmail2').value||null,
+    tipo_imovel: tipo,
+    bairros_interesse: cidade==='Joinville' ? bairros : null,
+    bairro_outro: cidade!=='Joinville' ? v('lBairroOutro').value||null : null,
+    cidade,
+    orcamento_minimo: v('lOrcMin').value ? Number(v('lOrcMin').value) : null,
+    orcamento_maximo: v('lOrcMax').value ? Number(v('lOrcMax').value) : null,
+    quartos: !['Terreno','Sala Comercial','Galpão'].includes(tipo) ? v('lQuartos').value : null,
+    quartos_outro: !['Terreno','Sala Comercial','Galpão'].includes(tipo) && v('lQuartos').value==='Outro' ? v('lQuartosOutro').value||null : null,
+    status: v('lStatus').value,
+    data_visita: v('lStatus').value==='Visita Agendada' ? v('lVisitaData').value||null : null,
+    horario_visita: v('lStatus').value==='Visita Agendada' ? v('lVisitaHora').value||null : null,
+    data_contato: v('lDataContato').value||hoje,
+    horario_contato: v('lHorarioContato').value||null,
+    canal_primeiro_contato: v('lCanalContato').value||null,
+    resultado_primeiro_contato: v('lResultadoContato').value||null,
+    data_proximo_contato: v('lProximoContato').value||null,
+    origem: v('lOrigem').value,
+    origem_detalhe: v('lOrigemDetalhe').value||null,
+    codigo_univen_interesse: ['Plantão','Lista Perfil Imóveis'].includes(v('lOrigem').value) ? v('lUniven').value||null : null,
+    urgencia: v('lUrgencia').value,
+    financiamento: v('lFinanciamento').value==='true',
+    preferencia: v('lPreferencia').value,
+    permuta,
+    permuta_tipo_bem: permuta ? v('lPermutaTipo').value : null,
+    permuta_bairro: permuta ? v('lPermutaBairro').value||null : null,
+    permuta_tipo_outro: permuta ? v('lPermutaOutro').value||null : null,
+    permuta_valor: permuta && v('lPermutaValor').value ? Number(v('lPermutaValor').value) : null,
+    retorno: v('lRetorno').value==='true',
+    observacoes: v('lObs').value||null
+  };
+
+  let err;
+  if(editingId) {
+    ({error:err} = await sb.from('leads').update(payload).eq('id', editingId));
+  } else {
+    const {data: novoLead, error: errInsert} = await sb.from('leads').insert([payload]).select();
+    err = errInsert;
+    // Registrar automaticamente a 1ª tentativa de contato
+    if(!err && novoLead && novoLead[0]) {
+      const leadId = novoLead[0].id;
+      await sb.from('tentativas_contato').insert([{
+        lead_id: leadId,
+        data_contato: v('lDataContato').value||hoje,
+        horario_contato: v('lHorarioContato').value||null,
+        tipo_contato: v('lCanalContato').value||'WhatsApp',
+        resultado: v('lResultadoContato').value||'Não atendeu',
+        numero_tentativa: 1,
+        observacao: '1º contato registrado automaticamente'
+      }]);
+    }
+  }
+
+  if(err) { toast('Erro ao salvar: '+err.message, false); return; }
+  toast(editingId ? 'Lead atualizado!' : 'Lead registrado!');
+  closeModal('mLead');
+  await loadLeads();
+  renderLeads();
+  loadDashboard();
+}
+
+// ── Toggles do formulário de Lead ──────────────────
+function toggleQuartosLead() {
+  const tipo = v('lTipo').value;
+  const showQuartos = !['Terreno','Sala Comercial','Galpão'].includes(tipo);
+  show('lQuartosWrap', showQuartos);
+  if(!showQuartos) show('lQuartosOutroWrap', false);
+  else toggleQuartosOutroLead();
+}
+function toggleQuartosOutroLead() {
+  show('lQuartosOutroWrap', v('lQuartos').value === 'Outro');
+}
+function toggleBairroLead() {
+  const joinville = v('lCidade').value === 'Joinville';
+  show('lBairroJoinWrap', joinville);
+  show('lBairroOutroWrap', !joinville);
+}
+function toggleVisitaLead() {
+  const visita = v('lStatus').value === 'Visita Agendada';
+  show('lVisitaDataWrap', visita);
+  show('lVisitaHoraWrap', visita);
+}
+function togglePermuta() {
+  const perm = v('lPermuta').value === 'true';
+  show('lPermutaTipoWrap', perm);
+  if(perm) { togglePermutaBairro(); show('lPermutaValorWrap', true); }
+  else { show('lPermutaBairroWrap',false); show('lPermutaOutroWrap',false); show('lPermutaValorWrap',false); }
+}
+function togglePermutaBairro() {
+  if(v('lPermuta').value!=='true') return;
+  const tipo = v('lPermutaTipo').value;
+  show('lPermutaBairroWrap', ['Apartamento','Casa','Terreno'].includes(tipo));
+  show('lPermutaOutroWrap', tipo==='Outro');
+}
+function toggleOrigemDetalhe() {
+  const orig = v('lOrigem').value;
+  show('lOrigemDetalheWrap', ['Lista de Construtora','Outro'].includes(orig));
+  show('lUnivenWrap', ['Plantão','Lista Perfil Imóveis'].includes(orig));
+}
+
+// ── VER LEAD ───────────────────────────────────────
+async function verLead(id) {
+  const l = allLeads.find(x=>x.id===id);
+  if(!l) return;
+  v('mLeadDetNome').textContent = l.nome;
+  v('mLeadDetEdit').onclick = () => { closeModal('mLeadDetalhe'); editarLead(id); };
+
+  const {data: tent} = await sb.from('tentativas_contato').select('*').eq('lead_id', id).order('data_contato', {ascending:false});
+  const {data: emails} = await sb.from('emails_recebidos').select('*').eq('lead_id', id).order('data_envio', {ascending:false});
+
+  const canalIcon = {Ligação:'📞', WhatsApp:'💬', 'E-mail Marketing':'📧', Visita:'🏠', Outro:'📌'};
+
+  const tlHtml = (tent||[]).map(t => `
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-content">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div class="tl-date">${fmtDate(t.data_contato)}${t.horario_contato ? ' às '+t.horario_contato : ''} · ${canalIcon[t.tipo_contato]||'📌'} <strong>${t.tipo_contato}</strong> · ${t.numero_tentativa}ª tentativa</div>
+          <button onclick="excluirTentativa('${t.id}','${id}')" style="background:none;border:none;cursor:pointer;color:var(--text-light);font-size:12px;padding:0;flex-shrink:0" title="Excluir">🗑</button>
+        </div>
+        <div class="tl-text">${t.observacao||''}</div>
+        <span class="badge ${t.resultado?.includes('Atendeu')||t.resultado?.includes('Agendou') ? 'badge-green' : 'badge-gray'}">${t.resultado||''}</span>
+      </div>
+    </div>
+  `).join('') || '<p style="color:var(--text-light);font-size:13px">Nenhuma tentativa registrada ainda.</p>';
+
+  const emailHtml = (emails||[]).map(e => `
+    <div style="font-size:13px;padding:8px 12px;background:var(--off-white);border-radius:8px;margin-bottom:6px">
+      📧 <strong>${fmtDate(e.data_envio)}</strong> — ${e.campanha_nome||'Campanha'}
+    </div>
+  `).join('') || '<p style="color:var(--text-light);font-size:13px">Nenhum e-mail recebido.</p>';
+
+  v('mLeadDetBody').innerHTML = `
+    <div class="grid-2 mb16">
+      <div><div style="font-size:10.5px;color:var(--text-light);text-transform:uppercase;letter-spacing:0.9px;margin-bottom:5px">Contato</div>
+        <div style="font-weight:500">${l.telefone_principal}</div>
+        <div style="font-size:12px;color:var(--text-light)">${l.email_principal||'—'}</div></div>
+      <div><div style="font-size:10.5px;color:var(--text-light);text-transform:uppercase;letter-spacing:0.9px;margin-bottom:5px">Interesse</div>
+        <div style="font-weight:500">${l.tipo_imovel||'—'} · ${(l.bairros_interesse||[]).join(', ')||l.bairro_outro||'—'}</div>
+        <div style="font-size:12px;color:var(--text-light)">${l.quartos||''} · ${fmt(l.orcamento_maximo)}</div></div>
+      <div><div style="font-size:10.5px;color:var(--text-light);text-transform:uppercase;letter-spacing:0.9px;margin-bottom:5px">Status</div>${statusPill(l.status)}</div>
+      <div><div style="font-size:10.5px;color:var(--text-light);text-transform:uppercase;letter-spacing:0.9px;margin-bottom:5px">Próx. Contato</div>${contactBadge(l)}</div>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <strong>📞 Histórico de Tentativas</strong>
+      <button class="btn btn-secondary btn-sm" onclick="abrirTentativa('${id}')">+ Registrar Tentativa</button>
+    </div>
+    <div class="timeline">${tlHtml}</div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+    <strong style="display:block;margin-bottom:10px">✉️ E-mails Recebidos</strong>
+    ${emailHtml}
+  `;
+  openModal('mLeadDetalhe');
+}
+
+function abrirTentativa(leadId) {
+  const l = allLeads.find(x => x.id === leadId);
+  v('tLeadId').value = leadId;
+  v('tData').value = hoje;
+  if(v('tHorario')) v('tHorario').value = '';
+  v('tTipo').value = 'WhatsApp';
+  v('tResultado').value = 'Não respondeu';
+  v('tObs').value = '';
+  v('tProximoContato').value = '';
+  v('tLeadNomeLabel').textContent = l ? `👤 ${l.nome} · ${l.telefone_principal}` : '';
+  closeModal('mLeadDetalhe');
+  openModal('mTentativa');
+}
+
+async function salvarTentativa() {
+  const leadId = v('tLeadId').value;
+  const {data: existentes} = await sb.from('tentativas_contato').select('id').eq('lead_id', leadId);
+  const numero = (existentes||[]).length + 1;
+
+  const {error} = await sb.from('tentativas_contato').insert([{
+    lead_id: leadId,
+    data_contato: v('tData').value,
+    horario_contato: v('tHorario').value||null,
+    tipo_contato: v('tTipo').value,
+    resultado: v('tResultado').value,
+    numero_tentativa: numero,
+    observacao: v('tObs').value||null
+  }]);
+
+  if(error) { toast('Erro: '+error.message, false); return; }
+
+  const proximoContato = v('tProximoContato').value;
+  if(proximoContato) {
+    await sb.from('leads').update({ data_proximo_contato: proximoContato }).eq('id', leadId);
+    await loadLeads();
+    renderLeads();
+  }
+
+  toast('Tentativa registrada!');
+  closeModal('mTentativa');
+  verLead(leadId);
+}
+
+async function excluirTentativa(tentativaId, leadId) {
+  if(!confirm('Excluir esta tentativa?')) return;
+  const {error} = await sb.from('tentativas_contato').delete().eq('id', tentativaId);
+  if(error) { toast('Erro: '+error.message, false); return; }
+  toast('Tentativa excluída!');
+  verLead(leadId);
+}
+
+// ── CAPTAÇÕES ──────────────────────────────────────
+function renderCaptacoes() {
+  const search = v('captSearch').value.toLowerCase();
+  const fStatus = v('captFilterStatus').value;
+
+  const items = allCaptacoes.filter(c => {
+    if(search && !c.nome_proprietario.toLowerCase().includes(search) && !(c.codigo_univen||'').toLowerCase().includes(search)) return false;
+    if(fStatus && c.status !== fStatus) return false;
+    return true;
+  });
+
+  if(!items.length) {
+    v('captacoesBody').innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-icon">🏠</div>Nenhuma captação encontrada</div></td></tr>';
+    return;
+  }
+
+  v('captacoesBody').innerHTML = items.map(c => `
+    <tr>
+      <td><div class="td-name">${c.nome_proprietario}</div><div class="td-sub" style="color:var(--gold)">${c.codigo_univen||'—'}</div></td>
+      <td>${c.tipo_imovel||'—'} · ${c.bairro||c.bairro_outro||'—'}</td>
+      <td><strong>${fmt(c.valor_venda)}</strong></td>
+      <td><div>${c.quartos||'—'} · ${c.area_m2||'—'}m²</div><div class="td-sub">${c.vagas_garagem||0} vaga(s) · ${c.mobiliado||'—'}</div></td>
+      <td>${statusPill(c.status)}</td>
+      <td><span class="badge badge-gold">${c.origem||'—'}</span></td>
+      <td>
+        <button class="action-btn" onclick="editarCaptacao('${c.id}')">✏️</button>
+        <button class="action-btn del" onclick="confirmarDelete('captacoes','${c.id}')">🗑</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function novaCaptacao() {
+  editingId = null;
+  v('mCaptTitle').textContent = '+ Nova Captação';
+  ['cId','cNome','cTel','cEmail','cUniven','cValor','cArea','cObs','cOrigemOutro','cBairroOutro','cQuartosOutro'].forEach(id => { const el=v(id); if(el) el.value=''; });
+  v('cTipo').value='Apartamento'; v('cCidade').value='Joinville'; v('cStatus').value='Novo';
+  v('cOrigem').value='Indicação Perfil'; v('cMobiliado').value='Não mobiliado';
+  v('cPermuta').value='false'; v('cVagas').value='0'; v('cData').value=hoje;
+  toggleCaptacaoFields(); toggleBairroCapt(); toggleCaptOrigemOutro();
+  openModal('mCaptacao');
+}
+
+async function editarCaptacao(id) {
+  const c = allCaptacoes.find(x=>x.id===id);
+  if(!c) return;
+  editingId = id;
+  v('mCaptTitle').textContent = 'Editar Captação';
+  v('cId').value = id;
+  v('cNome').value = c.nome_proprietario||'';
+  v('cTel').value = c.telefone||'';
+  v('cEmail').value = c.email||'';
+  v('cUniven').value = c.codigo_univen||'';
+  v('cTipo').value = c.tipo_imovel||'Apartamento';
+  v('cCidade').value = c.cidade||'Joinville';
+  v('cBairro').value = c.bairro||'América';
+  v('cBairroOutro').value = c.bairro_outro||'';
+  v('cValor').value = c.valor_venda||'';
+  v('cQuartos').value = c.quartos||'1 Dormitório';
+  v('cQuartosOutro') && (v('cQuartosOutro').value = c.quartos_outro||'');
+  v('cArea').value = c.area_m2||'';
+  v('cVagas').value = c.vagas_garagem||0;
+  v('cMobiliado').value = c.mobiliado||'Não mobiliado';
+  v('cPermuta').value = c.estuda_permuta ? 'true' : 'false';
+  v('cStatus').value = c.status||'Novo';
+  v('cData').value = c.data_captacao||hoje;
+  v('cOrigem').value = c.origem||'Indicação Perfil';
+  v('cOrigemOutro').value = c.origem_outro||'';
+  v('cObs').value = c.observacoes||'';
+  toggleCaptacaoFields(); toggleBairroCapt(); toggleCaptOrigemOutro();
+  openModal('mCaptacao');
+}
+
+async function salvarCaptacao() {
+  const nome = v('cNome').value.trim();
+  if(!nome) { toast('Preencha o nome do proprietário!', false); return; }
+  const tipo = v('cTipo').value;
+  const cidade = v('cCidade').value;
+
+  const payload = {
+    nome_proprietario: nome,
+    telefone: v('cTel').value||null,
+    email: v('cEmail').value||null,
+    codigo_univen: v('cUniven').value||null,
+    tipo_imovel: tipo,
+    bairro: cidade==='Joinville' ? v('cBairro').value : null,
+    bairro_outro: cidade!=='Joinville' ? v('cBairroOutro').value||null : null,
+    cidade,
+    valor_venda: v('cValor').value ? Number(v('cValor').value) : null,
+    quartos: !['Terreno','Sala Comercial','Galpão'].includes(tipo) ? v('cQuartos').value : null,
+    quartos_outro: !['Terreno','Sala Comercial','Galpão'].includes(tipo) && v('cQuartos').value==='Outro' ? v('cQuartosOutro').value||null : null,
+    area_m2: v('cArea').value ? Number(v('cArea').value) : null,
+    vagas_garagem: tipo!=='Terreno' ? Number(v('cVagas').value) : null,
+    mobiliado: v('cMobiliado').value,
+    estuda_permuta: v('cPermuta').value==='true',
+    status: v('cStatus').value,
+    data_captacao: v('cData').value||hoje,
+    origem: v('cOrigem').value,
+    origem_outro: v('cOrigem').value==='Outra' ? v('cOrigemOutro').value||null : null,
+    observacoes: v('cObs').value||null
+  };
+
+  let err;
+  if(editingId) {
+    ({error:err} = await sb.from('captacoes').update(payload).eq('id', editingId));
+  } else {
+    ({error:err} = await sb.from('captacoes').insert([payload]));
+  }
+  if(err) { toast('Erro: '+err.message, false); return; }
+  toast(editingId ? 'Captação atualizada!' : 'Captação registrada!');
+  closeModal('mCaptacao');
+  await loadCaptacoes();
+  renderCaptacoes();
+}
+
+function toggleCaptacaoFields() {
+  const tipo = v('cTipo').value;
+  const showQ = !['Terreno','Sala Comercial','Galpão'].includes(tipo);
+  show('cQuartosWrap', showQ);
+  if(!showQ) show('cQuartosOutroWrap', false);
+  else toggleCaptQuartosOutro();
+  show('cVagasWrap', tipo!=='Terreno');
+}
+function toggleCaptQuartosOutro() {
+  show('cQuartosOutroWrap', v('cQuartos').value === 'Outro');
+}
+function toggleBairroCapt() {
+  const join = v('cCidade').value==='Joinville';
+  show('cBairroWrap', join); show('cBairroOutroWrap', !join);
+}
+function toggleCaptOrigemOutro() {
+  show('cOrigemOutroWrap', v('cOrigem').value==='Outra');
+}
+
+// ── VENDAS ─────────────────────────────────────────
+function renderVendas() {
+  const search = v('vendaSearch').value.toLowerCase();
+  const fStatus = v('vendaFilterStatus').value;
+
+  const items = allVendas.filter(vv => {
+    if(search && !(vv.nome_imovel||'').toLowerCase().includes(search) && !(vv.nome_comprador||'').toLowerCase().includes(search)) return false;
+    if(fStatus && vv.status !== fStatus) return false;
+    return true;
+  });
+
+  if(!items.length) {
+    v('vendasBody').innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-icon">💰</div>Nenhuma venda registrada</div></td></tr>';
+    return;
+  }
+
+  v('vendasBody').innerHTML = items.map(vv => `
+    <tr>
+      <td><div class="td-name">${vv.nome_imovel}</div><div class="td-sub">${fmtDate(vv.data_venda)} · ${vv.bairro||vv.bairro_outro||'—'}</div></td>
+      <td>${vv.nome_comprador||'—'}</td>
+      <td><strong>${fmt(vv.valor_imovel)}</strong></td>
+      <td>${fmt(vv.comissao_bruta)}<div class="td-sub">${vv.quem_vendeu==='colega'?'Só captação':'Venda'} ${vv.quem_captou==='eu'?'+ captação':''}</div></td>
+      <td><strong style="color:var(--green)">${fmt(vv.comissao_liquida)}</strong><div class="td-sub">IR: ${vv.percentual_imposto||0}%</div></td>
+      <td>${statusPill(vv.status)}</td>
+      <td>
+        <button class="action-btn" onclick="editarVenda('${vv.id}')">✏️</button>
+        <button class="action-btn del" onclick="confirmarDelete('vendas','${vv.id}')">🗑</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function novaVenda() {
+  editingId = null;
+  v('mVendaTitle').textContent = '+ Registrar Venda';
+  ['vId','vNome','vComprador','vVendedor','vObs','vCaptLink','vColega','vBairroOutro','vOrigemOutro'].forEach(id=>{const el=v(id);if(el)el.value=''});
+  v('vTipo').value='Apartamento'; v('vCidade').value='Joinville'; v('vStatus').value='Contrato Assinado';
+  v('vOrigem').value='Plantão'; v('vQuemVendeu').value='eu'; v('vQuemCaptou').value='eu';
+  v('vParceria').value='false'; v('vImposto').value='8'; v('vData').value=hoje; v('vDataComissao').value='';
+  v('vValor').value='';
+  toggleColega(); toggleBairroVenda(); toggleVendaOrigemOutro(); calcComissao();
+  openModal('mVenda');
+}
+
+async function editarVenda(id) {
+  const vv = allVendas.find(x=>x.id===id);
+  if(!vv) return;
+  editingId = id;
+  v('mVendaTitle').textContent = 'Editar Venda';
+  v('vId').value = id;
+  v('vNome').value = vv.nome_imovel||'';
+  v('vTipo').value = vv.tipo_imovel||'Apartamento';
+  v('vCidade').value = vv.cidade||'Joinville';
+  v('vBairro').value = vv.bairro||'América';
+  v('vBairroOutro').value = vv.bairro_outro||'';
+  v('vData').value = vv.data_venda||hoje;
+  v('vValor').value = vv.valor_imovel||'';
+  v('vComprador').value = vv.nome_comprador||'';
+  v('vVendedor').value = vv.nome_vendedor||'';
+  v('vOrigem').value = vv.origem_negocio||'Plantão';
+  v('vOrigemOutro') && (v('vOrigemOutro').value = vv.origem_negocio_outro||'');
+  v('vStatus').value = vv.status||'Contrato Assinado';
+  v('vDataComissao').value = vv.data_prevista_comissao||'';
+  v('vQuemVendeu').value = vv.quem_vendeu||'eu';
+  v('vColega').value = vv.nome_colega||'';
+  v('vQuemCaptou').value = vv.quem_captou||'eu';
+  v('vParceria').value = vv.parceria ? 'true' : 'false';
+  v('vImposto').value = vv.percentual_imposto||8;
+  v('vObs').value = vv.observacoes||'';
+  toggleColega(); toggleBairroVenda(); toggleVendaOrigemOutro(); calcComissao();
+  openModal('mVenda');
+}
+
+function toggleColega() { show('vColeganWrap', v('vQuemVendeu').value==='colega'); }
+function toggleVendaOrigemOutro() { show('vOrigemOutroWrap', v('vOrigem').value==='Outro'); }
+function toggleBairroVenda() {
+  const join = v('vCidade').value==='Joinville';
+  show('vBairroWrap', join); show('vBairroOutroWrap', !join);
+}
+
+function calcComissao() {
+  const valor = parseFloat(v('vValor').value)||0;
+  const parceria = v('vParceria').value==='true';
+  const quemV = v('vQuemVendeu').value;
+  const quemC = v('vQuemCaptou').value;
+  const impPct = parseFloat(v('vImposto').value)||0;
+
+  const comissaoTotal = valor * 0.06;
+  const base = parceria ? comissaoTotal/2 : comissaoTotal;
+
+  let pct = 0; let cenario = '';
+  if(quemV==='eu') {
+    if(quemC==='eu') { pct=0.60; cenario='Eu vendi + Eu captei (60%)'; }
+    else if(quemC==='perfil') { pct=0.50; cenario='Eu vendi + Captação Perfil (50%)'; }
+    else { pct=0.40; cenario='Eu vendi + Captação terceiros (40%)'; }
+  } else {
+    if(quemC==='eu') { pct=0.20; cenario='Colega vendeu + Eu captei (20%)'; }
+    else if(quemC==='perfil') { pct=0.10; cenario='Colega vendeu + Captação Perfil (10%)'; }
+    else { pct=0; cenario='Colega vendeu + Captação terceiros (0%)'; }
+  }
+  if(parceria) cenario = '(Parceria ÷2) ' + cenario;
+
+  const bruta = base*pct;
+  const imposto = bruta*(impPct/100);
+  const liquida = bruta-imposto;
+
+  v('cv1').textContent = fmt(comissaoTotal);
+  v('cv2').textContent = fmt(base)+(parceria?' (parceria ÷2)':'');
+  v('cv3').textContent = cenario;
+  v('cv4').textContent = fmt(bruta);
+  v('cv5').textContent = fmt(imposto)+` (${impPct}%)`;
+  v('cv6').textContent = fmt(liquida);
+
+  return {comissaoTotal, base, pct:pct*100, bruta, imposto, liquida};
+}
+
+async function salvarVenda() {
+  const nome = v('vNome').value.trim();
+  const valor = parseFloat(v('vValor').value);
+  if(!nome || !valor) { toast('Preencha nome e valor do imóvel!', false); return; }
+
+  const comm = calcComissao();
+  const cidade = v('vCidade').value;
+  const captLink = v('vCaptLink').value.trim();
+  let captacaoId = null;
+
+  if(captLink) {
+    const cFound = allCaptacoes.find(c => c.codigo_univen?.toLowerCase()===captLink.toLowerCase() || c.nome_imovel?.toLowerCase()===captLink.toLowerCase());
+    if(cFound) {
+      captacaoId = cFound.id;
+      await sb.from('captacoes').update({status:'Vendido'}).eq('id', cFound.id);
+      await loadCaptacoes();
+    }
+  }
+
+  const payload = {
+    nome_imovel: nome,
+    tipo_imovel: v('vTipo').value,
+    bairro: cidade==='Joinville' ? v('vBairro').value : null,
+    bairro_outro: cidade!=='Joinville' ? v('vBairroOutro').value||null : null,
+    cidade,
+    data_venda: v('vData').value||hoje,
+    valor_imovel: valor,
+    nome_comprador: v('vComprador').value||null,
+    nome_vendedor: v('vVendedor').value||null,
+    origem_negocio: v('vOrigem').value,
+    origem_negocio_outro: v('vOrigem').value==='Outro' ? v('vOrigemOutro').value||null : null,
+    status: v('vStatus').value,
+    data_prevista_comissao: v('vDataComissao').value||null,
+    captacao_id: captacaoId,
+    quem_vendeu: v('vQuemVendeu').value,
+    nome_colega: v('vQuemVendeu').value==='colega' ? v('vColega').value||null : null,
+    quem_captou: v('vQuemCaptou').value,
+    parceria: v('vParceria').value==='true',
+    percentual_imposto: parseFloat(v('vImposto').value)||0,
+    comissao_total_imobiliaria: comm.comissaoTotal,
+    base_comissao: comm.base,
+    percentual_aplicado: comm.pct,
+    comissao_bruta: comm.bruta,
+    imposto_valor: comm.imposto,
+    comissao_liquida: comm.liquida,
+    observacoes: v('vObs').value||null
+  };
+
+  let err;
+  if(editingId) {
+    ({error:err} = await sb.from('vendas').update(payload).eq('id', editingId));
+  } else {
+    ({error:err} = await sb.from('vendas').insert([payload]));
+  }
+  if(err) { toast('Erro: '+err.message, false); return; }
+  toast(editingId ? 'Venda atualizada!' : 'Venda registrada!');
+  closeModal('mVenda');
+  await loadVendas();
+  renderVendas();
+  loadDashboard();
+}
+
+// ── PANFLETAGEM ────────────────────────────────────
+function renderPanfleta() {
+  const totalMes = allPanfleta.filter(p=>{
+    const agora = new Date();
+    return p.data_distribuicao && p.data_distribuicao.startsWith(`${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}`);
+  });
+  const qtdMes = totalMes.reduce((a,p)=>a+(p.quantidade||0),0);
+  const bairrosMes = new Set(totalMes.map(p=>p.bairro||p.bairro_outro)).size;
+  const leadsMes = allLeads.filter(l=>{
+    const agora=new Date();
+    return l.origem==='Folder' && l.data_contato && l.data_contato.startsWith(`${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}`);
+  }).length;
+  const taxa = qtdMes>0 ? ((leadsMes/qtdMes)*100).toFixed(2)+'%' : '—';
+
+  v('pTotal').textContent = qtdMes.toLocaleString('pt-BR');
+  v('pBairros').textContent = bairrosMes;
+  v('pLeads').textContent = leadsMes;
+  v('pTaxa').textContent = taxa;
+
+  if(!allPanfleta.length) {
+    v('panfletaBody').innerHTML = '<tr><td colspan="6"><div class="empty"><div class="empty-icon">📄</div>Nenhuma distribuição registrada</div></td></tr>';
+    return;
+  }
+  v('panfletaBody').innerHTML = allPanfleta.map(p => `
+    <tr>
+      <td>${fmtDate(p.data_distribuicao)}</td>
+      <td>${p.bairro||p.bairro_outro||'—'}</td>
+      <td>${p.cidade||'—'}</td>
+      <td><strong>${(p.quantidade||0).toLocaleString('pt-BR')}</strong></td>
+      <td>${p.observacoes||'—'}</td>
+      <td><button class="action-btn del" onclick="confirmarDelete('panfletagem','${p.id}')">🗑</button></td>
+    </tr>
+  `).join('');
+}
+
+function novaPanfleto() {
+  ['pId','pQtd','pObs','pBairroOutro'].forEach(id => { const el=v(id); if(el) el.value=''; });
+  v('pData').value = hoje;
+  v('pCidade').value = 'Joinville';
+  toggleBairroPanf();
+  openModal('mPanfleto');
+}
+
+async function salvarPanfleto() {
+  const qtd = parseInt(v('pQtd').value);
+  if(!qtd || qtd <= 0) { toast('Informe a quantidade!', false); return; }
+  const cidade = v('pCidade').value;
+  const payload = {
+    data_distribuicao: v('pData').value||hoje,
+    bairro: cidade==='Joinville' ? v('pBairro').value : null,
+    bairro_outro: cidade!=='Joinville' ? v('pBairroOutro').value||null : null,
+    cidade,
+    quantidade: qtd,
+    observacoes: v('pObs').value||null
+  };
+  const {error} = await sb.from('panfletagem').insert([payload]);
+  if(error) { toast('Erro: '+error.message, false); return; }
+  toast('Distribuição registrada!');
+  closeModal('mPanfleto');
+  await loadPanfleta();
+  renderPanfleta();
+}
+
+function toggleBairroPanf() {
+  const join = v('pCidade').value==='Joinville';
+  show('pBairroWrap', join); show('pBairroOutroWrap', !join);
+}
+
+// ── METAS ──────────────────────────────────────────
+
+let allMetaSemanas = [];
+const NOMES_MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function buildMetaSemanas() {
+  if(allMetaSemanas.length) return;
+  // Semanas domingo→sábado, começando em 03/05/2026
+  const start = new Date(Date.UTC(2026, 4, 3));
+  const end   = new Date(Date.UTC(2060, 11, 31));
+  let cur = new Date(start);
+  while(cur <= end) {
+    const fim = new Date(cur); fim.setUTCDate(fim.getUTCDate() + 6);
+    allMetaSemanas.push({
+      inicio: cur.toISOString().split('T')[0],
+      fim:    fim.toISOString().split('T')[0],
+      mes: cur.getUTCMonth(),
+      ano: cur.getUTCFullYear()
+    });
+    cur.setUTCDate(cur.getUTCDate() + 7);
+  }
+}
+
+function buildMesAnoSelector() {
+  buildMetaSemanas();
+
+  // Popular anos disponíveis
+  const anos = [...new Set(allMetaSemanas.map(s => s.ano))];
+  const selAno = v('metaAno');
+  selAno.innerHTML = '';
+  anos.forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a;
+    opt.textContent = a;
+    selAno.appendChild(opt);
+  });
+}
+
+function onMesAnoChange() {
+  const mes = parseInt(v('metaMes').value);
+  const ano = parseInt(v('metaAno').value);
+  const semanas = allMetaSemanas.filter(s => s.ano === ano && s.mes === mes);
+  renderMetaSemanasDoMes(semanas);
+  renderMetaHistorico();
+}
+
+function fmtSemLabel(s) {
+  return `${fmtDate(s.inicio)} a ${fmtDate(s.fim)}`;
+}
+
+async function renderMetaSemanasDoMes(semanas) {
+  const container = v('metaSemanasContainer');
+  if(!semanas.length) { container.innerHTML = '<div class="card"><div class="empty">Nenhuma semana neste período.</div></div>'; return; }
+
+  const hoje2 = new Date().toISOString().split('T')[0];
+  let html = '';
+
+  for(let i=0; i<semanas.length; i++) {
+    const s = semanas[i];
+    const meta = allMetas.find(m => m.semana_inicio === s.inicio);
+    const sid = s.inicio.replace(/-/g,'');
+    const isAtiva = s.inicio <= hoje2 && hoje2 <= s.fim;
+    const isFutura = s.inicio > hoje2;
+
+    // Realizado (sem contatos — será atualizado async depois)
+    const panfReal = allPanfleta.filter(p => p.data_distribuicao >= s.inicio && p.data_distribuicao <= s.fim).reduce((a,p)=>a+(p.quantidade||0),0);
+    const captReal = allCaptacoes.filter(c => c.data_captacao >= s.inicio && c.data_captacao <= s.fim).length;
+    const emailReal = allDisparos.filter(d => d.data_envio >= s.inicio && d.data_envio <= s.fim).length;
+
+    html += `
+    <div class="card mb16" id="semCard_${sid}" style="border-left:3px solid ${isAtiva?'var(--gold)':isFutura?'var(--border)':'var(--navy)'}">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:${meta?'14px':'6px'}">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:600;color:var(--navy);">
+          ${isAtiva?'🟡 ':''}Semana ${i+1} — ${fmtSemLabel(s)}
+          ${isAtiva?'<span class="badge badge-gold" style="margin-left:8px;font-size:10px">Semana atual</span>':''}
+        </div>
+        <div style="display:flex;gap:8px;">
+          ${meta
+            ? `<button class="btn btn-secondary btn-sm" onclick="editarMetaSemana('${s.inicio}')">✏️ Editar</button>
+               <button class="btn btn-danger btn-sm" onclick="excluirMetaSemana('${s.inicio}')">🗑 Excluir</button>`
+            : `<button class="btn btn-primary btn-sm" onclick="abrirFormMeta('${s.inicio}')">+ Definir Meta</button>`
+          }
+        </div>
+      </div>
+
+      <!-- Formulário inline -->
+      <div id="formMeta_${sid}" style="display:none;background:var(--off-white);border-radius:9px;padding:14px;margin-bottom:14px;border:1px solid var(--border);">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--gold);font-weight:600;margin-bottom:12px;">Definir metas</div>
+        <div class="form-grid">
+          <div class="fg"><label>Contatar leads</label><input type="number" class="fi" id="mC_${sid}" placeholder="ex: 100" value="${meta?.meta_contatos||''}"></div>
+          <div class="fg"><label>Captações realizadas</label><input type="number" class="fi" id="mCap_${sid}" placeholder="ex: 5" value="${meta?.meta_captacoes||''}"></div>
+          <div class="fg"><label>Panfletos a distribuir</label><input type="number" class="fi" id="mP_${sid}" placeholder="ex: 300" value="${meta?.meta_panfletos||''}"></div>
+          <div class="fg"><label>E-mails a enviar</label><input type="number" class="fi" id="mE_${sid}" placeholder="ex: 2" value="${meta?.meta_emails||''}"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button class="btn btn-primary btn-sm" onclick="salvarMetaSemana('${s.inicio}','${s.fim}','${sid}')">💾 Salvar</button>
+          <button class="btn btn-secondary btn-sm" onclick="fecharFormMeta('${sid}')">Cancelar</button>
+        </div>
+      </div>
+
+      ${meta
+        ? `<div id="progresso_${sid}">${renderProgressoSemana(meta, panfReal, captReal, emailReal, 0)}</div>`
+        : `<div style="font-size:13px;color:var(--text-light);">Nenhuma meta definida para esta semana.</div>`
+      }
+    </div>`;
+  }
+
+  container.innerHTML = html;
+
+  // Atualiza contatos (async) para cada semana com meta
+  for(const s of semanas) {
+    const meta = allMetas.find(m => m.semana_inicio === s.inicio);
+    if(!meta) continue;
+    const sid = s.inicio.replace(/-/g,'');
+    const {data:tent} = await sb.from('tentativas_contato').select('id').gte('data_contato', s.inicio).lte('data_contato', s.fim);
+    const contatosReal = (tent||[]).length;
+    const panfReal = allPanfleta.filter(p => p.data_distribuicao >= s.inicio && p.data_distribuicao <= s.fim).reduce((a,p)=>a+(p.quantidade||0),0);
+    const captReal = allCaptacoes.filter(c => c.data_captacao >= s.inicio && c.data_captacao <= s.fim).length;
+    const emailReal = allDisparos.filter(d => d.data_envio >= s.inicio && d.data_envio <= s.fim).length;
+    const el = v('progresso_'+sid);
+    if(el) el.innerHTML = renderProgressoSemana(meta, panfReal, captReal, emailReal, contatosReal);
+  }
+}
+
+function renderProgressoSemana(meta, panfReal, captReal, emailReal, contatosReal) {
+  const items = [
+    {label:'Contatar leads',        real:contatosReal, meta:meta.meta_contatos||0},
+    {label:'Captações realizadas',  real:captReal,     meta:meta.meta_captacoes||0},
+    {label:'Panfletos distribuídos',real:panfReal,     meta:meta.meta_panfletos||0},
+    {label:'E-mails enviados',      real:emailReal,    meta:meta.meta_emails||0},
+  ].filter(i => i.meta > 0);
+
+  if(!items.length) return '<div style="font-size:12px;color:var(--text-light)">Meta salva sem valores definidos.</div>';
+
+  return items.map(i => {
+    const pct = Math.min(100, Math.round((i.real / i.meta) * 100));
+    const cls = pct >= 100 ? 'g' : pct >= 50 ? 'y' : 'r';
+    return `<div class="meta-item">
+      <div class="meta-header"><span class="meta-name">${i.label}</span><span class="meta-pct ${cls}">${pct}% — ${i.real}/${i.meta}</span></div>
+      <div class="progress-bar"><div class="progress-fill ${cls}" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function abrirFormMeta(inicio) {
+  const sid = inicio.replace(/-/g,'');
+  const el = v('formMeta_'+sid);
+  if(el) el.style.display = 'block';
+}
+
+function fecharFormMeta(sid) {
+  const el = v('formMeta_'+sid);
+  if(el) el.style.display = 'none';
+}
+
+function editarMetaSemana(inicio) {
+  abrirFormMeta(inicio);
+}
+
+async function excluirMetaSemana(inicio) {
+  if(!confirm('Excluir a meta desta semana?')) return;
+  const {error} = await sb.from('metas').delete().eq('semana_inicio', inicio);
+  if(error) { toast('Erro: '+error.message, false); return; }
+  toast('Meta excluída!');
+  await loadMetas();
+  onMesAnoChange();
+  renderMetaHistorico();
+}
+
+async function salvarMetaSemana(inicio, fim, sid) {
+  const payload = {
+    semana_inicio: inicio,
+    semana_fim: fim,
+    meta_contatos:  parseInt(v('mC_'+sid)?.value)  || 0,
+    meta_captacoes: parseInt(v('mCap_'+sid)?.value) || 0,
+    meta_panfletos: parseInt(v('mP_'+sid)?.value)  || 0,
+    meta_emails:    parseInt(v('mE_'+sid)?.value)   || 0
+  };
+  const {error} = await sb.from('metas').upsert([payload], {onConflict:'semana_inicio'});
+  if(error) { toast('Erro: '+error.message, false); return; }
+  toast('Meta salva!');
+  fecharFormMeta(sid);
+  await loadMetas();
+  onMesAnoChange();
+  renderMetaHistorico();
+}
+
+async function renderMetaHistorico() {
+  const el = v('metaHistorico');
+  if(!el) return;
+  const sorted = [...allMetas].sort((a,b) => b.semana_inicio.localeCompare(a.semana_inicio));
+  if(!sorted.length) { el.innerHTML = '<div class="empty">Nenhuma meta registrada ainda.</div>'; return; }
+  let html = '<div class="table-wrap"><table class="data-table"><thead><tr><th>Semana</th><th>Contatos</th><th>Captações</th><th>Panfletos</th><th>E-mails</th><th>Ações</th></tr></thead><tbody>';
+  sorted.forEach(m => {
+    html += `<tr>
+      <td><div style="font-weight:500">${fmtDate(m.semana_inicio)} a ${fmtDate(m.semana_fim)}</div></td>
+      <td>${m.meta_contatos||'—'}</td><td>${m.meta_captacoes||'—'}</td>
+      <td>${m.meta_panfletos||'—'}</td><td>${m.meta_emails||'—'}</td>
+      <td>
+        <button class="action-btn" onclick="irParaMetaSemana('${m.semana_inicio}')">✏️</button>
+        <button class="action-btn del" onclick="excluirMetaSemana('${m.semana_inicio}')">🗑</button>
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+function irParaMetaSemana(inicio) {
+  const s = allMetaSemanas.find(x => x.inicio === inicio);
+  if(!s) return;
+  v('metaMes').value = s.mes;
+  v('metaAno').value = s.ano;
+  onMesAnoChange();
+  setTimeout(() => {
+    const sid = inicio.replace(/-/g,'');
+    const card = v('semCard_'+sid);
+    if(card) { card.scrollIntoView({behavior:'smooth', block:'center'}); abrirFormMeta(inicio); }
+  }, 300);
+}
+
+function initMetas() {
+  buildMetaSemanas();
+  buildMesAnoSelector();
+
+  // Selecionar mês e ano atuais
+  const hoje2 = new Date();
+  v('metaMes').value = hoje2.getMonth();
+  v('metaAno').value = hoje2.getFullYear();
+
+  onMesAnoChange();
+  renderMetaHistorico();
+}
+
+// Mantidas por compatibilidade
+function getInicioSemanaDOM(d) {
+  const dia = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  dia.setUTCDate(dia.getUTCDate() - dia.getUTCDay());
+  return dia.toISOString().split('T')[0];
+}
+async function loadMeta() {}
+async function salvarMeta() {}
+
+// ── E-MAIL MARKETING ──────────────────────────────
+async function filtrarLeadsEmail() {
+  const tipo = v('emTipo').value;
+  const quartos = v('emQuartos').value;
+  const orcMin = parseFloat(v('emOrcMin').value)||0;
+  const orcMax = parseFloat(v('emOrcMax').value)||Infinity;
+  const fin = v('emFin').value;
+  const pref = v('emPref').value;
+
+  emLeadsFiltrados = allLeads.filter(l => {
+    if(!l.email_principal) return false;
+    if(['Descartado','Vendido'].includes(l.status)) return false;
+    if(tipo && l.tipo_imovel!==tipo) return false;
+    if(quartos && l.quartos!==quartos) return false;
+    if(orcMin && (l.orcamento_maximo||0) < orcMin) return false;
+    if(orcMax<Infinity && (l.orcamento_minimo||0) > orcMax) return false;
+    if(fin!=='' && String(l.financiamento)!==fin) return false;
+    if(pref && l.preferencia!==pref) return false;
+    return true;
+  });
+
+  v('emQtd').textContent = `${emLeadsFiltrados.length} leads encontrados`;
+  const partes = [];
+  if(tipo) partes.push(tipo);
+  if(quartos) partes.push(quartos);
+  if(pref) partes.push(pref);
+  if(orcMin) partes.push(`a partir de ${fmt(orcMin)}`);
+  if(orcMax<Infinity) partes.push(`até ${fmt(orcMax)}`);
+  v('emResumo').textContent = partes.join(' · ') || 'Todos os leads com e-mail';
+
+  v('emLeadsBody').innerHTML = emLeadsFiltrados.map(l => `
+    <tr><td>${l.nome}</td><td>${l.email_principal}</td><td>${l.tipo_imovel||'—'}</td>
+    <td>${fmt(l.orcamento_maximo)}</td><td>${statusPill(l.status)}</td></tr>
+  `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-light)">Nenhum lead encontrado</td></tr>';
+
+  v('emData').value = hoje;
+  v('emResultado').style.display = 'block';
+}
+
+function limparFiltrosEmail() {
+  ['emTipo','emQuartos','emFin','emPref'].forEach(id => v(id).value='');
+  v('emOrcMin').value=''; v('emOrcMax').value='';
+  v('emResultado').style.display='none';
+  emLeadsFiltrados=[];
+}
+
+function exportarListaEmail() {
+  if(!emLeadsFiltrados.length) { toast('Nenhum lead para exportar', false); return; }
+  const rows = [['Nome','E-mail','Tipo de Imóvel','Orçamento Máximo','Status']];
+  emLeadsFiltrados.forEach(l => rows.push([l.nome, l.email_principal, l.tipo_imovel||'', l.orcamento_maximo||'', l.status]));
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Lista Email');
+  XLSX.writeFile(wb, `lista_email_${hoje}.xlsx`);
+  toast('Lista exportada!');
+}
+
+async function registrarDisparo() {
+  const campanha = v('emCampanha').value.trim();
+  if(!campanha) { toast('Informe o nome da campanha!', false); return; }
+  if(!emLeadsFiltrados.length) { toast('Aplique os filtros primeiro!', false); return; }
+
+  const payload = {
+    campanha_nome: campanha,
+    data_envio: v('emData').value||hoje,
+    segmentacao_resumo: v('emResumo').textContent,
+    quantidade_leads: emLeadsFiltrados.length,
+    leads_ids: emLeadsFiltrados.map(l=>l.id),
+    observacoes: v('emObs').value||null
+  };
+  const {data, error} = await sb.from('disparos_email').insert([payload]).select();
+  if(error) { toast('Erro: '+error.message, false); return; }
+
+  // Registrar nos leads
+  const disparoId = data[0].id;
+  const emailRecs = emLeadsFiltrados.map(l => ({lead_id:l.id, disparo_id:disparoId, campanha_nome:campanha, data_envio:v('emData').value||hoje}));
+  await sb.from('emails_recebidos').insert(emailRecs);
+
+  toast('Disparo registrado!');
+  v('emCampanha').value=''; v('emObs').value='';
+  await loadDisparos();
+  renderDisparos();
+}
+
+function renderDisparos() {
+  if(!allDisparos.length) {
+    v('disparosBody').innerHTML = '<tr><td colspan="7"><div class="empty">Nenhum disparo registrado</div></td></tr>';
+    return;
+  }
+  v('disparosBody').innerHTML = allDisparos.map(d => `
+    <tr>
+      <td>${fmtDate(d.data_envio)}</td>
+      <td><strong>${d.campanha_nome||d.empreendimento||'—'}</strong><div class="td-sub">${d.tipo_planta||''}</div></td>
+      <td>${d.tipo_imovel||'—'}</td>
+      <td style="font-size:11px;color:var(--text-light)">${d.grupo_nome||d.segmentacao_resumo||'—'}<br>${d.quantidade_leads ? d.quantidade_leads+' leads' : ''}</td>
+      <td>${d.cidade||'—'}<div class="td-sub">${d.bairro||d.bairro_outro||''}</div></td>
+      <td>${d.valor ? fmt(d.valor) : '—'}</td>
+      <td><button class="action-btn del" onclick="confirmarDelete('disparos_email','${d.id}')">🗑</button></td>
+    </tr>
+  `).join('');
+}
+
+function abrirNovoDisparo() {
+  ['dData','dEmpreendimento','dObs','dBairroOutro','dConstutoraOutro','dDataEntrega','dCodigoUniven','dValor'].forEach(id=>{const el=v(id);if(el)el.value='';});
+  v('dData').value = hoje;
+  v('dTipoPlanta').value = 'Pronto';
+  v('dTipoImovel').value = 'Apartamento';
+  v('dCidade').value = 'Joinville';
+  // Popular grupos
+  const grupos = {};
+  allLeads.filter(l=>l.email_principal&&!['Descartado','Vendido'].includes(l.status)).forEach(l=>{
+    const key = [l.tipo_imovel||'?', l.quartos||'?', l.preferencia||'?', l.orcamento_maximo?`até ${fmt(l.orcamento_maximo)}`:'?'].join(' · ');
+    if(!grupos[key]) grupos[key]=0; grupos[key]++;
+  });
+  v('dGrupo').innerHTML = '<option value="">— Selecionar grupo —</option>' +
+    Object.entries(grupos).sort((a,b)=>b[1]-a[1]).map(([k,c])=>`<option value="${k}">${k} (${c} leads)</option>`).join('');
+  toggleDisparoTipo(); toggleDisparoBairro();
+  openModal('mDisparo');
+}
+
+function toggleDisparoTipo() {
+  const planta = v('dTipoPlanta').value === 'Na Planta';
+  show('dConstutoraWrap', planta);
+  show('dDataEntregaWrap', planta);
+  show('dCodigoUnivenWrap', !planta);
+  v('dValorLabel').textContent = planta ? 'Valor a partir de' : 'Valor do imóvel';
+  if(planta) toggleDisparoConstrutora();
+  else show('dConstutoraOutroWrap', false);
+}
+function toggleDisparoConstrutora() {
+  show('dConstutoraOutroWrap', v('dConstrutora').value === 'Outra');
+}
+function toggleDisparoBairro() {
+  const join = v('dCidade').value === 'Joinville';
+  show('dBairroJoinWrap', join);
+  show('dBairroOutroWrap', !join);
+}
+
+async function salvarDisparoEmail() {
+  const empreendimento = v('dEmpreendimento').value.trim();
+  if(!empreendimento) { toast('Informe o nome do empreendimento!', false); return; }
+  const tipoPlanta = v('dTipoPlanta').value;
+  const cidade = v('dCidade').value;
+  const construtora = tipoPlanta==='Na Planta' ? v('dConstrutora').value : null;
+  const payload = {
+    campanha_nome: empreendimento,
+    empreendimento,
+    tipo_planta: tipoPlanta,
+    tipo_imovel: v('dTipoImovel').value,
+    data_envio: v('dData').value||hoje,
+    cidade,
+    bairro: cidade==='Joinville' ? v('dBairroJoin').value : null,
+    bairro_outro: cidade!=='Joinville' ? v('dBairroOutro').value||null : null,
+    construtora: construtora !== 'Outra' ? construtora : null,
+    construtora_outra: construtora==='Outra' ? v('dConstutoraOutro').value||null : null,
+    data_entrega_prevista: tipoPlanta==='Na Planta' ? v('dDataEntrega').value||null : null,
+    codigo_univen: tipoPlanta==='Pronto' ? v('dCodigoUniven').value||null : null,
+    valor: v('dValor').value ? Number(v('dValor').value) : null,
+    grupo_nome: v('dGrupo').value||null,
+    segmentacao_resumo: v('dGrupo').value||null,
+    observacoes: v('dObs').value||null,
+    quantidade_leads: 0
+  };
+  const {error} = await sb.from('disparos_email').insert([payload]);
+  if(error) { toast('Erro: '+error.message, false); return; }
+  toast('Disparo registrado!');
+  closeModal('mDisparo');
+  await loadDisparos();
+  renderDisparos();
+}
+
+async function gerarGrupos() {
+  const grupos = {};
+  allLeads.filter(l=>l.email_principal&&!['Descartado','Vendido'].includes(l.status)).forEach(l=>{
+    const key = [l.tipo_imovel||'?', l.quartos||'?', l.preferencia||'?',
+      l.orcamento_maximo ? `até ${fmt(l.orcamento_maximo)}` : '?'].join(' · ');
+    if(!grupos[key]) grupos[key] = {leads:[], tipo:l.tipo_imovel, quartos:l.quartos, pref:l.preferencia, max:l.orcamento_maximo};
+    grupos[key].leads.push(l);
+  });
+
+  let html = '';
+  Object.entries(grupos).sort((a,b)=>b[1].leads.length-a[1].leads.length).forEach(([key, g]) => {
+    html += `
+      <div class="card mb16">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div><div class="card-title" style="margin-bottom:2px">${key}</div>
+          <div style="font-size:12px;color:var(--text-light)">${g.leads.length} leads com e-mail</div></div>
+          <button class="btn btn-secondary btn-sm" onclick="exportarGrupo(${JSON.stringify(key).replace(/"/g,'&quot;')})">⬇ Exportar</button>
+        </div>
+        <div style="font-size:12px;color:var(--text-mid)">${g.leads.map(l=>l.nome).join(', ')}</div>
+      </div>`;
+  });
+  v('gruposContainer').innerHTML = html || '<div class="empty">Nenhum grupo identificado — cadastre leads com e-mail!</div>';
+}
+
+function exportarGrupo(key) {
+  const grupos = {};
+  allLeads.filter(l=>l.email_principal&&!['Descartado','Vendido'].includes(l.status)).forEach(l=>{
+    const k = [l.tipo_imovel||'?', l.quartos||'?', l.preferencia||'?',
+      l.orcamento_maximo ? `até ${fmt(l.orcamento_maximo)}` : '?'].join(' · ');
+    if(!grupos[k]) grupos[k] = [];
+    grupos[k].push(l);
+  });
+  const leads = grupos[key] || [];
+  if(!leads.length) return;
+  const rows = [['Nome','E-mail','Tipo','Quartos','Orçamento Máximo','Preferência','Status']];
+  leads.forEach(l => rows.push([l.nome, l.email_principal, l.tipo_imovel||'', l.quartos||'', l.orcamento_maximo||'', l.preferencia||'', l.status]));
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Grupo');
+  XLSX.writeFile(wb, `grupo_${hoje}.xlsx`);
+  toast('Grupo exportado!');
+}
+
+// ── ANÁLISES ───────────────────────────────────────
+function loadAnalises(section) {
+  if(chartsDrawn[section]) return;
+  chartsDrawn[section] = true;
+  const meses = getLast6Months();
+
+  if(section==='leads') {
+    sb.from('tentativas_contato').select('*').then(({data}) => {
+      const tent = data||[];
+      const conts = meses.map(m => tent.filter(t=>t.data_contato&&t.data_contato.startsWith(m.key)).length);
+      const mets = meses.map(m => {
+        const meta = allMetas.find(mt=>mt.semana_inicio&&mt.semana_inicio.startsWith(m.key.substring(0,7)));
+        return meta?.meta_contatos||0;
+      });
+      new Chart(v('cContatos'), {type:'bar', data:{labels:meses.map(m=>m.label), datasets:[
+        {label:'Leads novos', data:meses.map(m=>allLeads.filter(l=>l.data_contato&&l.data_contato.startsWith(m.key)).length), backgroundColor:'#1A2744', borderRadius:4},
+        {label:'Retentativas', data:conts.map((c,i)=>Math.max(0,c-allLeads.filter(l=>l.data_contato&&l.data_contato.startsWith(meses[i].key)).length)), backgroundColor:'#C9A84C', borderRadius:4},
+        {label:'Meta', data:mets, type:'line', borderColor:'#D94040', borderDash:[4,4], fill:false, pointRadius:0}
+      ]}, options:{...chartOpts(), scales:{x:{stacked:true,grid:{display:false},ticks:{font:{family:'Outfit',size:11}}},y:{stacked:true,grid:{color:'#F0EDE6'},ticks:{font:{family:'Outfit',size:11}}}}}});
+
+      const canais = ['Ligação','WhatsApp','E-mail','Visita'];
+      const taxas = canais.map(c => {
+        const total = tent.filter(t=>t.tipo_contato===c).length;
+        const resp = tent.filter(t=>t.tipo_contato===c&&['Atendeu / Respondeu','Agendou visita'].includes(t.resultado)).length;
+        return total>0 ? Math.round((resp/total)*100) : 0;
+      });
+      new Chart(v('cCanal'), {type:'bar', indexAxis:'y', data:{labels:canais, datasets:[{label:'% Resposta', data:taxas, backgroundColor:['#C9A84C','#1A2744','#3A7BD5','#3AAA6A'], borderRadius:4}]}, options:{...chartOpts(), plugins:{legend:{display:false}}}});
+
+      const nums = [1,2,3,4,5,6,7,8];
+      const porTentativa = nums.map(n => tent.filter(t=>t.numero_tentativa===n&&['Atendeu / Respondeu','Agendou visita'].includes(t.resultado)).length);
+      new Chart(v('cTentativas'), {type:'bar', data:{labels:nums.map(n=>n+'ª'), datasets:[{label:'Responderam', data:porTentativa, backgroundColor:'#C9A84C', borderRadius:4}]}, options:{...chartOpts(), plugins:{legend:{display:false}}}});
+
+      const origens = {};
+      allLeads.forEach(l => { if(l.origem) origens[l.origem]=(origens[l.origem]||0)+1; });
+      const oks = Object.entries(origens).sort((a,b)=>b[1]-a[1]).slice(0,6);
+      new Chart(v('cOrigemLeads'), {type:'doughnut', data:{labels:oks.map(o=>o[0]), datasets:[{data:oks.map(o=>o[1]), backgroundColor:['#C9A84C','#1A2744','#3A7BD5','#3AAA6A','#E8A020','#9090CC'], hoverOffset:6}]}, options:{responsive:true, plugins:{legend:{position:'right',labels:{font:{family:'Outfit',size:11},boxWidth:12}}}}});
+
+      const melhorCanal = canais[taxas.indexOf(Math.max(...taxas))];
+      const origemTop = oks[0]?.[0]||'—';
+      v('insLeads').innerHTML = `<p>💡 <strong>${origemTop}</strong> é o canal que mais trouxe leads. <strong>${melhorCanal}</strong> tem a maior taxa de resposta (${Math.max(...taxas)}%). Continue priorizando esses canais!</p>`;
+
+      // ── Gráficos de Horário ──────────────────────────
+      // Agrupar por slot de hora (ex: "09:00")
+      const tentComHora = tent.filter(t => t.horario_contato);
+      const horaContagem = {};
+      const horaTaxa = {};
+      tentComHora.forEach(t => {
+        const h = t.horario_contato;
+        if(!horaContagem[h]) horaContagem[h] = {total:0, resp:0};
+        horaContagem[h].total++;
+        if(['Atendeu / Respondeu','Agendou visita'].includes(t.resultado)) horaContagem[h].resp++;
+      });
+      // Ordenar por horário
+      const horas = Object.keys(horaContagem).sort();
+      const contagensHora = horas.map(h => horaContagem[h].total);
+      const taxasHora = horas.map(h => horaContagem[h].total > 0 ? Math.round((horaContagem[h].resp / horaContagem[h].total) * 100) : 0);
+
+      if(v('cHorario')) {
+        // Colorir barras: verde para horários com mais respostas
+        const maxTaxa = Math.max(...taxasHora, 1);
+        const bgColors = taxasHora.map(tx => {
+          const intensity = tx / maxTaxa;
+          if(intensity >= 0.7) return '#3AAA6A';
+          if(intensity >= 0.4) return '#C9A84C';
+          return '#1A2744';
+        });
+        new Chart(v('cHorario'), {
+          type:'bar',
+          data:{
+            labels: horas,
+            datasets:[{label:'Tentativas', data:contagensHora, backgroundColor:bgColors, borderRadius:4}]
+          },
+          options:{...chartOpts(), plugins:{legend:{display:false}}, scales:{x:{grid:{display:false},ticks:{font:{family:'Outfit',size:10}}},y:{grid:{color:'#F0EDE6'},ticks:{font:{family:'Outfit',size:11},stepSize:1}}}}
+        });
+        const melhorHora = horas[taxasHora.indexOf(Math.max(...taxasHora))];
+        const maisContatado = horas[contagensHora.indexOf(Math.max(...contagensHora))];
+        v('insHorario').innerHTML = tentComHora.length > 0
+          ? `<p>💡 O horário com maior taxa de resposta é <strong>${melhorHora||'—'}</strong>. O horário em que mais tentativas são feitas é <strong>${maisContatado||'—'}</strong>. Priorize contatos entre os horários de melhor retorno!</p>`
+          : `<p>💡 Ainda não há dados de horário suficientes. Comece a registrar o horário das tentativas para visualizar o melhor momento de contato.</p>`;
+      }
+      if(v('cHorarioTaxa')) {
+        new Chart(v('cHorarioTaxa'), {
+          type:'bar',
+          data:{
+            labels: horas,
+            datasets:[{label:'% Resposta', data:taxasHora, backgroundColor:'#C9A84C', borderRadius:4}]
+          },
+          options:{...chartOpts(), plugins:{legend:{display:false}}, scales:{x:{grid:{display:false},ticks:{font:{family:'Outfit',size:10}}},y:{grid:{color:'#F0EDE6'},max:100,ticks:{font:{family:'Outfit',size:11},callback:v=>v+'%'}}}}
+        });
+      }
+    });
+  }
+
+  if(section==='capt') {
+    const captMes = meses.map(m => allCaptacoes.filter(c=>c.data_captacao&&c.data_captacao.startsWith(m.key)).length);
+    new Chart(v('cCaptMes'), {type:'bar', data:{labels:meses.map(m=>m.label), datasets:[{label:'Captações', data:captMes, backgroundColor:'#C9A84C', borderRadius:5}]}, options:chartOpts()});
+    const tipos = {};
+    allCaptacoes.forEach(c => { if(c.tipo_imovel) tipos[c.tipo_imovel]=(tipos[c.tipo_imovel]||0)+1; });
+    const tOks = Object.entries(tipos).sort((a,b)=>b[1]-a[1]);
+    new Chart(v('cCaptTipo'), {type:'doughnut', data:{labels:tOks.map(o=>o[0]), datasets:[{data:tOks.map(o=>o[1]), backgroundColor:['#C9A84C','#1A2744','#3A7BD5','#3AAA6A','#E8A020','#9090CC'], hoverOffset:6}]}, options:{responsive:true, plugins:{legend:{position:'right',labels:{font:{family:'Outfit',size:11},boxWidth:12}}}}});
+    const topTipo = tOks[0]?.[0]||'—';
+    const bairros = {};
+    allCaptacoes.forEach(c => { const b=c.bairro||c.bairro_outro; if(b) bairros[b]=(bairros[b]||0)+1; });
+    const topBairro = Object.entries(bairros).sort((a,b)=>b[1]-a[1])[0]?.[0]||'—';
+    v('insCapt').innerHTML = `<p>💡 Tipo mais captado: <strong>${topTipo}</strong>. Bairro com mais captações: <strong>${topBairro}</strong>.</p>`;
+  }
+
+  if(section==='vendas') {
+    const brutaMes = meses.map(m => allVendas.filter(vv=>vv.data_venda&&vv.data_venda.startsWith(m.key)).reduce((a,vv)=>a+(vv.comissao_bruta||0),0));
+    const liqMes = meses.map(m => allVendas.filter(vv=>vv.data_venda&&vv.data_venda.startsWith(m.key)).reduce((a,vv)=>a+(vv.comissao_liquida||0),0));
+    new Chart(v('cVendasMes'), {type:'bar', data:{labels:meses.map(m=>m.label), datasets:[{label:'Bruta', data:brutaMes, backgroundColor:'#C9A84C', borderRadius:5},{label:'Líquida', data:liqMes, backgroundColor:'#1A2744', borderRadius:5}]}, options:chartOpts()});
+
+    const tcData = [
+      allVendas.filter(vv=>vv.quem_vendeu==='eu'&&vv.quem_captou==='eu').reduce((a,vv)=>a+(vv.comissao_bruta||0),0),
+      allVendas.filter(vv=>vv.quem_vendeu==='eu'&&vv.quem_captou!=='eu').reduce((a,vv)=>a+(vv.comissao_bruta||0),0),
+      allVendas.filter(vv=>vv.quem_vendeu==='colega').reduce((a,vv)=>a+(vv.comissao_bruta||0),0)
+    ];
+    new Chart(v('cTipoComissao'), {type:'doughnut', data:{labels:['Venda+Captação','Só Venda','Só Captação'], datasets:[{data:tcData, backgroundColor:['#C9A84C','#1A2744','#3AAA6A'], hoverOffset:6}]}, options:{responsive:true, plugins:{legend:{position:'right',labels:{font:{family:'Outfit',size:11},boxWidth:12}}}}});
+
+    const anoAtual = new Date().getFullYear();
+    const vAno = allVendas.filter(vv=>vv.data_venda&&vv.data_venda.startsWith(anoAtual));
+    const totBruta = vAno.reduce((a,vv)=>a+(vv.comissao_bruta||0),0);
+    const totLiq = vAno.reduce((a,vv)=>a+(vv.comissao_liquida||0),0);
+    v('totaisAno').innerHTML = `
+      <div style="text-align:center;padding:14px;background:var(--off-white);border-radius:10px"><div style="font-size:10px;color:var(--text-light);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px">Vendas</div><div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--navy)">${vAno.length}</div></div>
+      <div style="text-align:center;padding:14px;background:var(--off-white);border-radius:10px"><div style="font-size:10px;color:var(--text-light);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px">Comissão Bruta</div><div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:var(--navy)">${fmt(totBruta)}</div></div>
+      <div style="text-align:center;padding:14px;background:var(--off-white);border-radius:10px"><div style="font-size:10px;color:var(--text-light);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px">Comissão Líquida</div><div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:var(--green)">${fmt(totLiq)}</div></div>`;
+
+    const totalBc = tcData.reduce((a,b)=>a+b,0);
+    const pctVendaCapt = totalBc>0 ? Math.round((tcData[0]/totalBc)*100) : 0;
+    v('insVendas').innerHTML = `<p>💡 <strong>${pctVendaCapt}% do seu faturamento</strong> vem de vendas onde você também captou. Captar bem é faturar duas vezes!</p>`;
+  }
+
+  if(section==='panf') {
+    const panfMes = meses.map(m => allPanfleta.filter(p=>p.data_distribuicao&&p.data_distribuicao.startsWith(m.key)).reduce((a,p)=>a+(p.quantidade||0),0));
+    const metPanf = meses.map(m => {
+      const meta = allMetas.find(mt=>mt.semana_inicio&&mt.semana_inicio.startsWith(m.key));
+      return meta?.meta_panfletos||0;
+    });
+    new Chart(v('cPanfMes'), {type:'bar', data:{labels:meses.map(m=>m.label), datasets:[{label:'Distribuídos', data:panfMes, backgroundColor:'#C9A84C', borderRadius:5},{label:'Meta', data:metPanf, type:'line', borderColor:'#D94040', borderDash:[4,4], fill:false, pointRadius:0}]}, options:chartOpts()});
+
+    const bairroLeads = {};
+    allLeads.filter(l=>l.origem==='Folder').forEach(l => {
+      const b=(l.bairros_interesse||[])[0]||l.bairro_outro||'Outros';
+      bairroLeads[b]=(bairroLeads[b]||0)+1;
+    });
+    const bOks = Object.entries(bairroLeads).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    new Chart(v('cPanfBairro'), {type:'bar', indexAxis:'y', data:{labels:bOks.map(o=>o[0]), datasets:[{label:'Leads gerados', data:bOks.map(o=>o[1]), backgroundColor:'#C9A84C', borderRadius:4}]}, options:{...chartOpts(), plugins:{legend:{display:false}}}});
+
+    const mesAtual = new Date().toLocaleString('pt-BR',{month:'long',year:'numeric'});
+    const totPanf = panfMes[panfMes.length-1];
+    const totLeadsFolder = allLeads.filter(l=>l.origem==='Folder'&&l.data_contato&&l.data_contato.startsWith(meses[meses.length-1].key)).length;
+    const taxaC = totPanf>0 ? ((totLeadsFolder/totPanf)*100).toFixed(2) : 0;
+    v('insPanf').innerHTML = `<p>💡 Neste mês você distribuiu <strong>${totPanf.toLocaleString('pt-BR')} panfletos</strong> e gerou <strong>${totLeadsFolder} leads via folder (${taxaC}%)</strong>.</p>`;
+  }
+
+  if(section==='estrategia') {
+    const origens = {};
+    allLeads.forEach(l => { if(l.origem) { if(!origens[l.origem]) origens[l.origem]={total:0,vendido:0}; origens[l.origem].total++; if(l.status==='Vendido') origens[l.origem].vendido++; }});
+    const top3 = Object.entries(origens).map(([k,v])=>({k, taxa:v.total>0?Math.round((v.vendido/v.total)*100):0, total:v.total})).sort((a,b)=>b.taxa-a.taxa).slice(0,3);
+    const medalhas = ['🥇','🥈','🥉'];
+    v('topCanais').innerHTML = top3.map((o,i)=>`
+      <div style="display:flex;align-items:center;gap:12px;padding:12px;background:${i===0?'rgba(201,168,76,0.08)':'var(--off-white)'};border-radius:9px;margin-bottom:8px;border-left:3px solid ${i===0?'var(--gold)':'var(--border)'}">
+        <span style="font-size:20px">${medalhas[i]}</span>
+        <div><div style="font-weight:500">${o.k}</div><div style="font-size:12px;color:var(--text-light)">${o.taxa}% taxa de conversão · ${o.total} leads</div></div>
+      </div>`).join('') || '<div class="empty">Dados insuficientes</div>';
+
+    const bairrosDemanda = {};
+    const bairrosOferta = {};
+    allLeads.forEach(l=>(l.bairros_interesse||[]).forEach(b=>{bairrosDemanda[b]=(bairrosDemanda[b]||0)+1;}));
+    allCaptacoes.forEach(c=>{if(c.bairro){bairrosOferta[c.bairro]=(bairrosOferta[c.bairro]||0)+1;}});
+    const bairrosAll = [...new Set([...Object.keys(bairrosDemanda),...Object.keys(bairrosOferta)])].slice(0,6);
+    new Chart(v('cMapa'), {type:'bar', data:{labels:bairrosAll, datasets:[{label:'Demanda (leads)', data:bairrosAll.map(b=>bairrosDemanda[b]||0), backgroundColor:'#C9A84C', borderRadius:4},{label:'Oferta (captações)', data:bairrosAll.map(b=>bairrosOferta[b]||0), backgroundColor:'#1A2744', borderRadius:4}]}, options:chartOpts()});
+
+    const oportunidade = bairrosAll.find(b=>(bairrosDemanda[b]||0)>5&&!(bairrosOferta[b]));
+    v('insMapa').innerHTML = `<p>💡 ${oportunidade?`<strong>${oportunidade}</strong> tem alta demanda de leads, mas poucas captações. Oportunidade de prospecção ativa!`:'Continue monitorando o equilíbrio entre demanda e captações por bairro.'}</p>`;
+
+    const vendidosComData = allVendas.filter(vv=>vv.data_venda);
+    const cicloMedio = vendidosComData.length > 0 ? Math.round(vendidosComData.reduce((a,vv)=>{
+      const lead = allLeads.find(l=>l.status==='Vendido');
+      if(!lead||!lead.data_contato) return a;
+      const diff = (new Date(vv.data_venda)-new Date(lead.data_contato))/(1000*60*60*24);
+      return a+(diff>0?diff:0);
+    },0)/vendidosComData.length) : 0;
+
+    v('cicloVenda').innerHTML = `
+      <div style="font-family:'Cormorant Garamond',serif;font-size:54px;font-weight:700;color:var(--navy)">${cicloMedio||'—'}</div>
+      <div style="font-size:13px;color:var(--text-light)">dias do 1º contato até a venda</div>`;
+
+    const bairrosTicket = {};
+    allVendas.forEach(vv=>{const b=vv.bairro||vv.bairro_outro;if(b){if(!bairrosTicket[b])bairrosTicket[b]=[];bairrosTicket[b].push(vv.valor_imovel||0);}});
+    const btOks = Object.entries(bairrosTicket).map(([k,v])=>({k, avg:v.reduce((a,b)=>a+b,0)/v.length})).sort((a,b)=>b.avg-a.avg).slice(0,5);
+    new Chart(v('cTicket'), {type:'bar', indexAxis:'y', data:{labels:btOks.map(o=>o.k), datasets:[{label:'Ticket Médio', data:btOks.map(o=>o.avg), backgroundColor:'#C9A84C', borderRadius:4}]}, options:{...chartOpts(), plugins:{legend:{display:false}}, scales:{x:{grid:{display:false},ticks:{font:{family:'Outfit',size:10},callback:v=>'R$'+(v/1000).toFixed(0)+'k'}},y:{grid:{color:'#F0EDE6'},ticks:{font:{family:'Outfit',size:11}}}}}});
+  }
+}
+
+// ── DELETE ─────────────────────────────────────────
+function confirmarDelete(tabela, id) {
+  deleteCallback = async () => {
+    const {error} = await sb.from(tabela).delete().eq('id', id);
+    if(error) { toast('Erro ao excluir: '+error.message, false); return; }
+    toast('Excluído com sucesso!');
+    closeModal('mConfirm');
+    if(tabela==='leads') { await loadLeads(); renderLeads(); }
+    if(tabela==='captacoes') { await loadCaptacoes(); renderCaptacoes(); }
+    if(tabela==='vendas') { await loadVendas(); renderVendas(); }
+    if(tabela==='panfletagem') { await loadPanfleta(); renderPanfleta(); }
+    if(tabela==='disparos_email') { await loadDisparos(); renderDisparos(); }
+    loadDashboard();
+  };
+  v('confirmDeleteBtn').onclick = deleteCallback;
+  openModal('mConfirm');
+}
+
+// ── EXPORTAR ───────────────────────────────────────
+function exportarDados() {
+  const wb = XLSX.utils.book_new();
+
+  const addSheet = (data, nome, cols) => {
+    if(!data.length) return;
+    const rows = [cols, ...data.map(r => cols.map(c => {
+      const key = c.toLowerCase().replace(/ /g,'_').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      return r[key]||'';
+    }))];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), nome);
+  };
+
+  // Leads
+  const leadsRows = [['Nome','Telefone','E-mail','Tipo','Cidade','Orçamento Máx','Quartos','Status','Próx. Contato','Origem','Urgência','Financiamento','Observações']];
+  allLeads.forEach(l => leadsRows.push([l.nome,l.telefone_principal,l.email_principal||'',l.tipo_imovel||'',l.cidade||'',l.orcamento_maximo||'',l.quartos||'',l.status,l.data_proximo_contato||'',l.origem||'',l.urgencia||'',l.financiamento?'Sim':'Não',l.observacoes||'']));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(leadsRows), 'Leads');
+
+  const captRows = [['Proprietário','Código Univen','Tipo','Bairro','Cidade','Valor','Quartos','Área m²','Vagas','Status','Origem']];
+  allCaptacoes.forEach(c => captRows.push([c.nome_proprietario,c.codigo_univen||'',c.tipo_imovel||'',c.bairro||c.bairro_outro||'',c.cidade||'',c.valor_venda||'',c.quartos||'',c.area_m2||'',c.vagas_garagem||0,c.status,c.origem||'']));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(captRows), 'Captações');
+
+  const vendRows = [['Imóvel','Comprador','Data Venda','Valor Imóvel','Comissão Bruta','Comissão Líquida','Imposto %','Status','Quem Vendeu','Quem Captou']];
+  allVendas.forEach(vv => vendRows.push([vv.nome_imovel,vv.nome_comprador||'',vv.data_venda,vv.valor_imovel||'',vv.comissao_bruta||'',vv.comissao_liquida||'',vv.percentual_imposto||'',vv.status,vv.quem_vendeu,vv.quem_captou]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(vendRows), 'Vendas');
+
+  const panfRows = [['Data','Bairro','Cidade','Quantidade','Observações']];
+  allPanfleta.forEach(p => panfRows.push([p.data_distribuicao,p.bairro||p.bairro_outro||'',p.cidade||'',p.quantidade,p.observacoes||'']));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(panfRows), 'Panfletagem');
+
+  XLSX.writeFile(wb, `bianca_ieck_dados_${hoje}.xlsx`);
+  toast('Dados exportados!');
+}
+
+// ── Botões do topbar chamam modais corretos ─────────
+document.querySelector('.btn-secondary').addEventListener('click', exportarDados);
+
+// ── MOBILE NAV ─────────────────────────────────────
+function setMobileActive(tab) {
+  document.querySelectorAll('.mobile-nav-item').forEach(el => el.classList.remove('active'));
+  const el = document.getElementById('mn-'+tab);
+  if(el) el.classList.add('active');
+}
+
+function toggleMobileMore() { openDrawer(); }
+function closeMobileMore() { closeDrawer(); }
+
+function openDrawer() {
+  document.getElementById('mobileDrawer').classList.add('open');
+  document.getElementById('drawerOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDrawer() {
+  document.getElementById('mobileDrawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function drawerGoTab(tab) {
+  goTab(tab);
+  setMobileActive(tab);
+  // Atualiza item ativo no drawer
+  document.querySelectorAll('.drawer-nav-item').forEach(el => el.classList.remove('active'));
+  const el = document.getElementById('dn-'+tab);
+  if(el) el.classList.add('active');
+  closeDrawer();
+}
+
+// Override goTab to also update mobile nav
+const _goTab = goTab;
+
+// ── INIT ───────────────────────────────────────────
+init();
+
+</script>
+</body>
+</html>
