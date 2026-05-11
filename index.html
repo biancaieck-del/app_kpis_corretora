@@ -1736,6 +1736,41 @@ async function salvarLead() {
   let err;
   if(editingId) {
     ({error:err} = await sb.from('leads').update(payload).eq('id', editingId));
+
+    // Ao editar, atualizar (ou criar) a 1ª tentativa com os dados do formulário
+    if(!err) {
+      const dataContato  = v('lDataContato').value||hoje;
+      const horario      = v('lHorarioContato').value||null;
+      const canal        = v('lCanalContato').value||'WhatsApp';
+      const resultado    = v('lResultadoContato').value||'Não atendeu';
+
+      // Buscar tentativas existentes desse lead ordenadas por numero
+      const {data: tentExist} = await sb.from('tentativas_contato')
+        .select('*').eq('lead_id', editingId).order('numero_tentativa', {ascending:true});
+
+      const primeiraTentativa = (tentExist||[]).find(t => t.numero_tentativa === 1);
+
+      if(primeiraTentativa) {
+        // Atualizar a 1ª tentativa existente
+        await sb.from('tentativas_contato').update({
+          data_contato: dataContato,
+          horario_contato: horario,
+          tipo_contato: canal,
+          resultado: resultado
+        }).eq('id', primeiraTentativa.id);
+      } else {
+        // Não tinha nenhuma tentativa — criar a 1ª agora
+        await sb.from('tentativas_contato').insert([{
+          lead_id: editingId,
+          data_contato: dataContato,
+          horario_contato: horario,
+          tipo_contato: canal,
+          resultado: resultado,
+          numero_tentativa: 1,
+          observacao: '1º contato registrado via edição do lead'
+        }]);
+      }
+    }
   } else {
     const {data: novoLead, error: errInsert} = await sb.from('leads').insert([payload]).select();
     err = errInsert;
