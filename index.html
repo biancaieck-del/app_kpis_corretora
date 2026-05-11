@@ -642,6 +642,10 @@ body{font-family:'Outfit',sans-serif;background:var(--off-white);color:var(--tex
           <div class="card"><div class="card-title">🏠 Captações por Mês</div><canvas id="cCaptMes" height="180"></canvas></div>
           <div class="card"><div class="card-title">🏷 Tipo de Imóvel Captado</div><canvas id="cCaptTipo" height="180"></canvas><div class="insight" id="insCapt"></div></div>
         </div>
+        <div class="grid-2 mb16">
+          <div class="card"><div class="card-title">📍 Imóveis Captados por Bairro</div><canvas id="cCaptBairro" height="200"></canvas></div>
+          <div class="card"><div class="card-title">🌐 Origem das Captações</div><canvas id="cCaptOrigem" height="200"></canvas></div>
+        </div>
       </div>
 
       <div id="an-vendas" style="display:none">
@@ -725,28 +729,53 @@ body{font-family:'Outfit',sans-serif;background:var(--off-white);color:var(--tex
         </div>
         <div class="fg"><label>Origem</label>
           <select class="fs" id="lOrigem" onchange="toggleOrigemDetalhe()">
-            <option>Plantão</option><option>Indicação Perfil</option><option>Patrocinado Próprio</option><option>Instagram</option><option>Facebook</option><option>Indicação Cliente</option><option>Indicação Amigo</option><option>Folder</option><option>Cliente Captação</option><option>Lista de Construtora</option><option>Lista Perfil Imóveis</option><option>Outro</option>
+            <option>Plantão</option><option>Indicação Perfil</option><option>Patrocinado Próprio</option><option>Instagram</option><option>Facebook</option><option>OLX</option><option>Indicação Cliente</option><option>Indicação Amigo</option><option>Folder</option><option>Cliente Captação</option><option>Lista de Construtora</option><option>Lista Perfil Imóveis</option><option>Outro</option>
           </select>
         </div>
         <div class="fg hidden" id="lUnivenWrap"><label>Código do imóvel de interesse (Univen)</label><input type="text" class="fi" id="lUniven" maxlength="15" placeholder="UNV-XXXXX"></div>
         <div class="fg hidden" id="lOrigemDetalheWrap"><label>Detalhar origem</label><input type="text" class="fi" id="lOrigemDetalhe" placeholder="Especifique"></div>
         <div class="fg hidden" id="lVisitaDataWrap"><label>Data da visita</label><input type="date" class="fi" id="lVisitaData"></div>
         <div class="fg hidden" id="lVisitaHoraWrap"><label>Horário da visita</label><input type="time" class="fi" id="lVisitaHora"></div>
-        <div class="fg"><label>Data do 1º contato</label><input type="date" class="fi" id="lDataContato"></div>
-        <div class="fg"><label>Horário do 1º contato</label>
-          <select class="fs" id="lHorarioContato">
-            <option value="">— Selecionar —</option>
-          </select>
-        </div>
-        <div class="fg"><label>Canal do 1º contato</label>
-          <select class="fs" id="lCanalContato">
-            <option>Ligação</option><option>WhatsApp</option><option>E-mail Marketing</option><option>Visita</option><option>Outro</option>
-          </select>
-        </div>
-        <div class="fg"><label>Resultado do 1º contato</label>
-          <select class="fs" id="lResultadoContato">
-            <option>Não atendeu</option><option>Não respondeu</option><option>Atendeu / Respondeu</option><option>Agendou visita</option><option>Sem interesse</option>
-          </select>
+        <div class="fg full" style="background:var(--off-white);border-radius:10px;padding:12px 14px;border:1px solid var(--border);margin-top:4px;">
+          <label style="font-size:12px;font-weight:600;color:var(--navy);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block">📞 Primeiro Contato</label>
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
+            <label style="font-size:12.5px;color:var(--text-dark);font-weight:500;">O lead entrou em contato com você?</label>
+            <select class="fs" id="lLeadEntrou" onchange="toggleLeadEntrou()" style="max-width:100px;padding:6px 10px;">
+              <option value="nao">Não</option>
+              <option value="sim">Sim</option>
+            </select>
+          </div>
+          <!-- Bloco: Eu entrei em contato (lLeadEntrou = nao) -->
+          <div id="lBlocoEuContatei">
+            <div class="form-grid" style="margin:0;">
+              <div class="fg"><label>Data do 1º contato</label><input type="date" class="fi" id="lDataContato"></div>
+              <div class="fg"><label>Horário do 1º contato</label>
+                <select class="fs" id="lHorarioContato"><option value="">— Selecionar —</option></select>
+              </div>
+              <div class="fg"><label>Canal do 1º contato</label>
+                <select class="fs" id="lCanalContato">
+                  <option>Ligação</option><option>WhatsApp</option><option>E-mail Marketing</option><option>Visita</option><option>Outro</option>
+                </select>
+              </div>
+              <div class="fg"><label>Resultado do 1º contato</label>
+                <select class="fs" id="lResultadoContato">
+                  <option>Não atendeu</option><option>Não respondeu</option><option>Atendeu / Respondeu</option><option>Agendou visita</option><option>Sem interesse</option><option>Caixa postal</option><option>Número não existe/funciona</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <!-- Bloco: Lead me contatou (lLeadEntrou = sim) -->
+          <div id="lBlocoLeadEntrou" class="hidden">
+            <div class="form-grid" style="margin:0;">
+              <div class="fg"><label>Data do contato</label><input type="date" class="fi" id="lDataContatoInbound"></div>
+              <div class="fg"><label>Canal pelo qual o lead te contatou</label>
+                <select class="fs" id="lCanalInbound" onchange="toggleCanalInboundOutro()">
+                  <option>Instagram</option><option>Facebook</option><option>WhatsApp</option><option>OLX</option><option>Outro</option>
+                </select>
+              </div>
+              <div class="fg hidden" id="lCanalInboundOutroWrap"><label>Detalhar canal</label><input type="text" class="fi" id="lCanalInboundOutro" placeholder="Ex: Viva Real, Zap..."></div>
+            </div>
+          </div>
         </div>
         <input type="hidden" id="lProximoContato">
         <div class="fg"><label>Urgência</label><select class="fs" id="lUrgencia"><option>Baixa</option><option selected>Média</option><option>Alta</option></select></div>
@@ -980,6 +1009,8 @@ body{font-family:'Outfit',sans-serif;background:var(--off-white);color:var(--tex
             <option>Atendeu / Respondeu</option>
             <option>Agendou visita</option>
             <option>Sem interesse</option>
+            <option>Caixa postal</option>
+            <option>Número não existe/funciona</option>
           </select>
         </div>
         <div class="fg full">
@@ -1622,7 +1653,10 @@ function novoLead() {
   editingId = null;
   v('mLeadTitle').textContent = '+ Novo Lead';
   v('lId').value = '';
-  ['lNome','lTel1','lTel2','lEmail1','lEmail2','lOrcMin','lOrcMax','lObs','lProximoContato','lPermutaBairro','lPermutaOutro','lOrigemDetalhe','lVisitaData','lVisitaHora','lPermutaValor','lBairroOutro','lUniven','lQuartosOutro'].forEach(id => { const el=v(id); if(el) el.value=''; });
+  ['lNome','lTel1','lTel2','lEmail1','lEmail2','lOrcMin','lOrcMax','lObs','lProximoContato','lPermutaBairro','lPermutaOutro','lOrigemDetalhe','lVisitaData','lVisitaHora','lPermutaValor','lBairroOutro','lUniven','lQuartosOutro','lCanalInboundOutro'].forEach(id => { const el=v(id); if(el) el.value=''; });
+  v('lLeadEntrou') && (v('lLeadEntrou').value = 'nao');
+  if(v('lDataContatoInbound')) v('lDataContatoInbound').value = hoje;
+  if(v('lCanalInbound')) v('lCanalInbound').value = 'WhatsApp';
   Array.from(v('lBairroJoin').options).forEach(o => o.selected = false);
   v('lStatus').value = 'Novo';
   v('lTipo').value = 'Apartamento';
@@ -1637,7 +1671,7 @@ function novoLead() {
   if(v('lHorarioContato')) v('lHorarioContato').value = '';
   if(v('lCanalContato')) v('lCanalContato').value = 'WhatsApp';
   if(v('lResultadoContato')) v('lResultadoContato').value = 'Não atendeu';
-  toggleQuartosLead(); toggleQuartosOutroLead(); toggleBairroLead(); toggleVisitaLead(); togglePermuta(); toggleOrigemDetalhe();
+  toggleLeadEntrou(); toggleCanalInboundOutro(); toggleQuartosLead(); toggleQuartosOutroLead(); toggleBairroLead(); toggleVisitaLead(); togglePermuta(); toggleOrigemDetalhe();
   openModal('mLead');
 }
 
@@ -1663,6 +1697,10 @@ async function editarLead(id) {
   v('lOrigem').value = l.origem||'Plantão';
   v('lOrigemDetalhe').value = l.origem_detalhe||'';
   v('lUniven').value = l.codigo_univen_interesse||'';
+  v('lLeadEntrou') && (v('lLeadEntrou').value = l.lead_entrou_em_contato ? 'sim' : 'nao');
+  if(v('lDataContatoInbound')) v('lDataContatoInbound').value = l.data_contato_inbound||hoje;
+  if(v('lCanalInbound')) v('lCanalInbound').value = l.canal_inbound||'WhatsApp';
+  if(v('lCanalInboundOutro')) v('lCanalInboundOutro').value = l.canal_inbound_outro||'';
   v('lDataContato').value = l.data_contato||hoje;
   if(v('lHorarioContato')) v('lHorarioContato').value = l.horario_contato||'';
   if(v('lCanalContato')) v('lCanalContato').value = l.canal_primeiro_contato||'WhatsApp';
@@ -1683,7 +1721,7 @@ async function editarLead(id) {
   if(l.bairros_interesse) {
     Array.from(v('lBairroJoin').options).forEach(o => o.selected = l.bairros_interesse.includes(o.value));
   }
-  toggleQuartosLead(); toggleQuartosOutroLead(); toggleBairroLead(); toggleVisitaLead(); togglePermuta(); togglePermutaBairro(); toggleOrigemDetalhe();
+  toggleLeadEntrou(); toggleCanalInboundOutro(); toggleQuartosLead(); toggleQuartosOutroLead(); toggleBairroLead(); toggleVisitaLead(); togglePermuta(); togglePermutaBairro(); toggleOrigemDetalhe();
   openModal('mLead');
 }
 
@@ -1717,6 +1755,10 @@ async function salvarLead() {
     horario_contato: v('lHorarioContato').value||null,
     canal_primeiro_contato: v('lCanalContato').value||null,
     resultado_primeiro_contato: v('lResultadoContato').value||null,
+    lead_entrou_em_contato: v('lLeadEntrou').value === 'sim',
+    data_contato_inbound: v('lLeadEntrou').value === 'sim' ? (v('lDataContatoInbound').value||hoje) : null,
+    canal_inbound: v('lLeadEntrou').value === 'sim' ? v('lCanalInbound').value||null : null,
+    canal_inbound_outro: v('lLeadEntrou').value === 'sim' && v('lCanalInbound').value === 'Outro' ? v('lCanalInboundOutro').value||null : null,
     data_proximo_contato: v('lProximoContato').value||null,
     origem: v('lOrigem').value,
     origem_detalhe: v('lOrigemDetalhe').value||null,
@@ -1748,12 +1790,22 @@ async function salvarLead() {
   if(err) { toast('Erro ao salvar lead: '+err.message, false); return; }
 
   // ── Sincronizar 1ª tentativa de contato ──────────
-  const dataContato1 = v('lDataContato').value || hoje;
-  const horario1     = v('lHorarioContato').value || null;
-  const canal1       = v('lCanalContato').value || 'WhatsApp';
-  const resultado1   = v('lResultadoContato').value || 'Não atendeu';
+  // Se o lead entrou em contato: registrar como "inbound" (não é tentativa minha)
+  // Se eu entrei em contato: registrar como tentativa normal
+  const leadEntrou = v('lLeadEntrou').value === 'sim';
 
-  // Buscar tentativas existentes
+  const dataContato1 = leadEntrou
+    ? (v('lDataContatoInbound').value || hoje)
+    : (v('lDataContato').value || hoje);
+  const horario1  = leadEntrou ? null : (v('lHorarioContato').value || null);
+  const canal1    = leadEntrou
+    ? (v('lCanalInbound').value === 'Outro' ? (v('lCanalInboundOutro').value||'Outro') : v('lCanalInbound').value)
+    : (v('lCanalContato').value || 'WhatsApp');
+  const resultado1 = leadEntrou ? 'Lead entrou em contato' : (v('lResultadoContato').value || 'Não atendeu');
+  const obs1 = leadEntrou
+    ? `Lead entrou em contato via ${canal1}`
+    : '1º contato';
+
   const {data: tentExist, error: errBusca} = await sb
     .from('tentativas_contato')
     .select('id, numero_tentativa')
@@ -1770,7 +1822,8 @@ async function salvarLead() {
         data_contato:    dataContato1,
         horario_contato: horario1,
         tipo_contato:    canal1,
-        resultado:       resultado1
+        resultado:       resultado1,
+        observacao:      obs1
       }).eq('id', primeira.id);
       if(errUpd) alert('ERRO AO ATUALIZAR TENTATIVA:\n' + JSON.stringify(errUpd, null, 2));
     } else {
@@ -1781,7 +1834,7 @@ async function salvarLead() {
         tipo_contato:     canal1,
         resultado:        resultado1,
         numero_tentativa: 1,
-        observacao:       '1º contato'
+        observacao:       obs1
       };
       console.log('Inserindo tentativa:', registroTentativa);
       const {data: tentData, error: errIns} = await sb
@@ -1804,6 +1857,14 @@ async function salvarLead() {
 }
 
 // ── Toggles do formulário de Lead ──────────────────
+function toggleLeadEntrou() {
+  const sim = v('lLeadEntrou').value === 'sim';
+  show('lBlocoLeadEntrou', sim);
+  show('lBlocoEuContatei', !sim);
+}
+function toggleCanalInboundOutro() {
+  show('lCanalInboundOutroWrap', v('lCanalInbound').value === 'Outro');
+}
 function toggleQuartosLead() {
   const tipo = v('lTipo').value;
   const showQuartos = !['Terreno','Sala Comercial','Galpão'].includes(tipo);
@@ -2881,15 +2942,51 @@ function loadAnalises(section) {
 
   if(section==='capt') {
     const captMes = meses.map(m => allCaptacoes.filter(c=>c.data_captacao&&c.data_captacao.startsWith(m.key)).length);
-    new Chart(v('cCaptMes'), {type:'bar', data:{labels:meses.map(m=>m.label), datasets:[{label:'Captações', data:captMes, backgroundColor:'#C9A84C', borderRadius:5}]}, options:chartOpts()});
+    // Eixo Y com apenas números inteiros
+    const maxCaptMes = Math.max(...captMes, 1);
+    new Chart(v('cCaptMes'), {
+      type:'bar',
+      data:{labels:meses.map(m=>m.label), datasets:[{label:'Captações', data:captMes, backgroundColor:'#C9A84C', borderRadius:5}]},
+      options:{...chartOpts(), scales:{
+        x:{grid:{display:false},ticks:{font:{family:'Outfit',size:11}}},
+        y:{grid:{color:'#F0EDE6'}, ticks:{font:{family:'Outfit',size:11}, stepSize:1, callback: v => Number.isInteger(v) ? v : null}, min:0, max: Math.ceil(maxCaptMes * 1.2) || 5}
+      }}
+    });
+
     const tipos = {};
     allCaptacoes.forEach(c => { if(c.tipo_imovel) tipos[c.tipo_imovel]=(tipos[c.tipo_imovel]||0)+1; });
     const tOks = Object.entries(tipos).sort((a,b)=>b[1]-a[1]);
     new Chart(v('cCaptTipo'), {type:'doughnut', data:{labels:tOks.map(o=>o[0]), datasets:[{data:tOks.map(o=>o[1]), backgroundColor:['#C9A84C','#1A2744','#3A7BD5','#3AAA6A','#E8A020','#9090CC'], hoverOffset:6}]}, options:{responsive:true, plugins:{legend:{position:'right',labels:{font:{family:'Outfit',size:11},boxWidth:12}}}}});
     const topTipo = tOks[0]?.[0]||'—';
-    const bairros = {};
-    allCaptacoes.forEach(c => { const b=c.bairro||c.bairro_outro; if(b) bairros[b]=(bairros[b]||0)+1; });
-    const topBairro = Object.entries(bairros).sort((a,b)=>b[1]-a[1])[0]?.[0]||'—';
+
+    // Bairros
+    const bairrosMap = {};
+    allCaptacoes.forEach(c => { const b=c.bairro||c.bairro_outro; if(b) bairrosMap[b]=(bairrosMap[b]||0)+1; });
+    const bairrosOks = Object.entries(bairrosMap).sort((a,b)=>b[1]-a[1]).slice(0,12);
+    const topBairro = bairrosOks[0]?.[0]||'—';
+    if(v('cCaptBairro')) {
+      new Chart(v('cCaptBairro'), {
+        type:'bar',
+        data:{labels:bairrosOks.map(o=>o[0]), datasets:[{label:'Captações', data:bairrosOks.map(o=>o[1]), backgroundColor:'#1A2744', borderRadius:4}]},
+        options:{...chartOpts(), indexAxis:'y', scales:{
+          x:{grid:{color:'#F0EDE6'}, ticks:{font:{family:'Outfit',size:11}, stepSize:1, callback: v => Number.isInteger(v) ? v : null}, min:0},
+          y:{grid:{display:false}, ticks:{font:{family:'Outfit',size:10}}}
+        }, plugins:{legend:{display:false}}}
+      });
+    }
+
+    // Origem das captações
+    const origensMap = {};
+    allCaptacoes.forEach(c => { const o=c.origem||'Não informado'; origensMap[o]=(origensMap[o]||0)+1; });
+    const origensOks = Object.entries(origensMap).sort((a,b)=>b[1]-a[1]);
+    if(v('cCaptOrigem')) {
+      new Chart(v('cCaptOrigem'), {
+        type:'doughnut',
+        data:{labels:origensOks.map(o=>o[0]), datasets:[{data:origensOks.map(o=>o[1]), backgroundColor:['#C9A84C','#1A2744','#3A7BD5','#3AAA6A','#E8A020','#9090CC','#D96060','#8E6AC9'], hoverOffset:6}]},
+        options:{responsive:true, plugins:{legend:{position:'right',labels:{font:{family:'Outfit',size:11},boxWidth:12}}}}
+      });
+    }
+
     v('insCapt').innerHTML = `<p>💡 Tipo mais captado: <strong>${topTipo}</strong>. Bairro com mais captações: <strong>${topBairro}</strong>.</p>`;
   }
 
