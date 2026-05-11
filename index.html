@@ -1733,64 +1733,70 @@ async function salvarLead() {
     observacoes: v('lObs').value||null
   };
 
+  // ── Salvar lead ──────────────────────────────────
   let err;
+  let leadId = editingId;
+
   if(editingId) {
     ({error:err} = await sb.from('leads').update(payload).eq('id', editingId));
-
-    // Ao editar, atualizar (ou criar) a 1ª tentativa com os dados do formulário
-    if(!err) {
-      const dataContato  = v('lDataContato').value||hoje;
-      const horario      = v('lHorarioContato').value||null;
-      const canal        = v('lCanalContato').value||'WhatsApp';
-      const resultado    = v('lResultadoContato').value||'Não atendeu';
-
-      // Buscar tentativas existentes desse lead ordenadas por numero
-      const {data: tentExist} = await sb.from('tentativas_contato')
-        .select('*').eq('lead_id', editingId).order('numero_tentativa', {ascending:true});
-
-      const primeiraTentativa = (tentExist||[]).find(t => t.numero_tentativa === 1);
-
-      if(primeiraTentativa) {
-        // Atualizar a 1ª tentativa existente
-        await sb.from('tentativas_contato').update({
-          data_contato: dataContato,
-          horario_contato: horario,
-          tipo_contato: canal,
-          resultado: resultado
-        }).eq('id', primeiraTentativa.id);
-      } else {
-        // Não tinha nenhuma tentativa — criar a 1ª agora
-        await sb.from('tentativas_contato').insert([{
-          lead_id: editingId,
-          data_contato: dataContato,
-          horario_contato: horario,
-          tipo_contato: canal,
-          resultado: resultado,
-          numero_tentativa: 1,
-          observacao: '1º contato registrado via edição do lead'
-        }]);
-      }
-    }
   } else {
     const {data: novoLead, error: errInsert} = await sb.from('leads').insert([payload]).select();
     err = errInsert;
-    // Registrar automaticamente a 1ª tentativa de contato
-    if(!err && novoLead && novoLead[0]) {
-      const leadId = novoLead[0].id;
-      await sb.from('tentativas_contato').insert([{
-        lead_id: leadId,
-        data_contato: v('lDataContato').value||hoje,
-        horario_contato: v('lHorarioContato').value||null,
-        tipo_contato: v('lCanalContato').value||'WhatsApp',
-        resultado: v('lResultadoContato').value||'Não atendeu',
+    if(!err && novoLead?.[0]) leadId = novoLead[0].id;
+  }
+
+  if(err) { toast('Erro ao salvar lead: '+err.message, false); return; }
+
+  // ── Sincronizar 1ª tentativa de contato ──────────
+  const dataContato1 = v('lDataContato').value || hoje;
+  const horario1     = v('lHorarioContato').value || null;
+  const canal1       = v('lCanalContato').value || 'WhatsApp';
+  const resultado1   = v('lResultadoContato').value || 'Não atendeu';
+
+  // Buscar tentativas existentes
+  const {data: tentExist, error: errBusca} = await sb
+    .from('tentativas_contato')
+    .select('id, numero_tentativa')
+    .eq('lead_id', leadId)
+    .order('numero_tentativa', {ascending: true});
+
+  if(errBusca) {
+    alert('ERRO AO BUSCAR TENTATIVAS:\n' + JSON.stringify(errBusca, null, 2));
+  } else {
+    const primeira = (tentExist||[]).find(t => t.numero_tentativa === 1);
+
+    if(primeira) {
+      const {error: errUpd} = await sb.from('tentativas_contato').update({
+        data_contato:    dataContato1,
+        horario_contato: horario1,
+        tipo_contato:    canal1,
+        resultado:       resultado1
+      }).eq('id', primeira.id);
+      if(errUpd) alert('ERRO AO ATUALIZAR TENTATIVA:\n' + JSON.stringify(errUpd, null, 2));
+    } else {
+      const registroTentativa = {
+        lead_id:          leadId,
+        data_contato:     dataContato1,
+        horario_contato:  horario1,
+        tipo_contato:     canal1,
+        resultado:        resultado1,
         numero_tentativa: 1,
-        observacao: '1º contato registrado automaticamente'
-      }]);
+        observacao:       '1º contato'
+      };
+      console.log('Inserindo tentativa:', registroTentativa);
+      const {data: tentData, error: errIns} = await sb
+        .from('tentativas_contato')
+        .insert([registroTentativa])
+        .select();
+      if(errIns) {
+        alert('ERRO AO CRIAR TENTATIVA:\n' + JSON.stringify(errIns, null, 2));
+      } else {
+        console.log('Tentativa criada:', tentData);
+      }
     }
   }
 
-  if(err) { toast('Erro ao salvar: '+err.message, false); return; }
-  toast(editingId ? 'Lead atualizado!' : 'Lead registrado!');
+  toast(editingId ? 'Lead atualizado e histórico sincronizado!' : 'Lead registrado com 1ª tentativa!');
   closeModal('mLead');
   await loadLeads();
   renderLeads();
