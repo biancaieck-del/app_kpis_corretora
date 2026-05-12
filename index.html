@@ -982,9 +982,10 @@ body{font-family:'Outfit',sans-serif;background:var(--off-white);color:var(--tex
 <!-- MODAL TENTATIVA -->
 <div class="modal-bg" id="mTentativa">
   <div class="modal" style="max-width:480px">
-    <div class="modal-hdr"><h3>📞 Registrar Tentativa de Contato</h3><button class="modal-close" onclick="closeModal('mTentativa')">✕</button></div>
+    <div class="modal-hdr"><h3 id="mTentativaTitle">📞 Registrar Tentativa de Contato</h3><button class="modal-close" onclick="closeModal('mTentativa')">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="tLeadId">
+      <input type="hidden" id="tEditId">
       <div id="tLeadNomeLabel" style="background:var(--off-white);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:500;color:var(--navy);border:1px solid var(--border);"></div>
       <div class="form-grid">
         <div class="fg"><label>Data</label><input type="date" class="fi" id="tData"></div>
@@ -1003,7 +1004,7 @@ body{font-family:'Outfit',sans-serif;background:var(--off-white);color:var(--tex
           </select>
         </div>
         <div class="fg full"><label>Resultado</label>
-          <select class="fs" id="tResultado">
+          <select class="fs" id="tResultado" onchange="toggleProximoContato()">
             <option>Não atendeu</option>
             <option>Não respondeu</option>
             <option>Atendeu / Respondeu</option>
@@ -1011,9 +1012,10 @@ body{font-family:'Outfit',sans-serif;background:var(--off-white);color:var(--tex
             <option>Sem interesse</option>
             <option>Caixa postal</option>
             <option>Número não existe/funciona</option>
+            <option>Número não corresponde ao contato da lista</option>
           </select>
         </div>
-        <div class="fg full">
+        <div class="fg full" id="tProximoContatoWrap">
           <label>Próximo contato previsto</label>
           <input type="date" class="fi" id="tProximoContato">
           <small style="color:var(--text-light);font-size:11px;margin-top:4px;display:block">Se preenchido, atualiza a data do próximo contato no lead</small>
@@ -1023,7 +1025,7 @@ body{font-family:'Outfit',sans-serif;background:var(--off-white);color:var(--tex
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('mTentativa')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarTentativa()">Registrar Tentativa</button>
+      <button class="btn btn-primary" id="tBtnSalvar" onclick="salvarTentativa()">Registrar Tentativa</button>
     </div>
   </div>
 </div>
@@ -1195,7 +1197,8 @@ let editingId = null;
 let deleteCallback = null;
 let emLeadsFiltrados = [];
 let chartsDrawn = {};
-let hoje = new Date().toISOString().split('T')[0];
+const _now = new Date();
+let hoje = [_now.getFullYear(), String(_now.getMonth()+1).padStart(2,'0'), String(_now.getDate()).padStart(2,'0')].join('-');
 
 // ── Helpers ────────────────────────────────────────
 const fmt = n => n == null ? '—' : 'R$ ' + Number(n).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -1759,7 +1762,7 @@ async function salvarLead() {
     data_contato_inbound: v('lLeadEntrou').value === 'sim' ? (v('lDataContatoInbound').value||hoje) : null,
     canal_inbound: v('lLeadEntrou').value === 'sim' ? v('lCanalInbound').value||null : null,
     canal_inbound_outro: v('lLeadEntrou').value === 'sim' && v('lCanalInbound').value === 'Outro' ? v('lCanalInboundOutro').value||null : null,
-    data_proximo_contato: v('lProximoContato').value||null,
+    data_proximo_contato: v('lStatus').value === 'Descartado' ? null : (v('lProximoContato').value||null),
     origem: v('lOrigem').value,
     origem_detalhe: v('lOrigemDetalhe').value||null,
     codigo_univen_interesse: ['Plantão','Lista Perfil Imóveis'].includes(v('lOrigem').value) ? v('lUniven').value||null : null,
@@ -1881,9 +1884,11 @@ function toggleBairroLead() {
   show('lBairroOutroWrap', !joinville);
 }
 function toggleVisitaLead() {
-  const visita = v('lStatus').value === 'Visita Agendada';
+  const s = v('lStatus').value;
+  const visita = s === 'Visita Agendada';
   show('lVisitaDataWrap', visita);
   show('lVisitaHoraWrap', visita);
+  if(s === 'Descartado') v('lProximoContato').value = '';
 }
 function togglePermuta() {
   const perm = v('lPermuta').value === 'true';
@@ -1921,7 +1926,10 @@ async function verLead(id) {
       <div class="tl-content">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
           <div class="tl-date">${fmtDate(t.data_contato)}${t.horario_contato ? ' às '+t.horario_contato : ''} · ${canalIcon[t.tipo_contato]||'📌'} <strong>${t.tipo_contato}</strong> · ${t.numero_tentativa}ª tentativa</div>
-          <button onclick="excluirTentativa('${t.id}','${id}')" style="background:none;border:none;cursor:pointer;color:var(--text-light);font-size:12px;padding:0;flex-shrink:0" title="Excluir">🗑</button>
+          <div style="display:flex;gap:4px;flex-shrink:0">
+            <button onclick="editarTentativa('${t.id}','${id}')" style="background:none;border:none;cursor:pointer;color:var(--text-light);font-size:12px;padding:0" title="Editar">✏️</button>
+            <button onclick="excluirTentativa('${t.id}','${id}')" style="background:none;border:none;cursor:pointer;color:var(--text-light);font-size:12px;padding:0" title="Excluir">🗑</button>
+          </div>
         </div>
         <div class="tl-text">${t.observacao||''}</div>
         <span class="badge ${t.resultado?.includes('Atendeu')||t.resultado?.includes('Agendou') ? 'badge-green' : 'badge-gray'}">${t.resultado||''}</span>
@@ -1959,9 +1967,17 @@ async function verLead(id) {
   openModal('mLeadDetalhe');
 }
 
+function toggleProximoContato() {
+  const resultado = v('tResultado').value;
+  const ocultar = ['Sem interesse','Número não corresponde ao contato da lista'].includes(resultado);
+  show('tProximoContatoWrap', !ocultar);
+  if(ocultar) v('tProximoContato').value = '';
+}
+
 function abrirTentativa(leadId) {
   const l = allLeads.find(x => x.id === leadId);
   v('tLeadId').value = leadId;
+  v('tEditId').value = '';
   v('tData').value = hoje;
   if(v('tHorario')) v('tHorario').value = '';
   v('tTipo').value = 'WhatsApp';
@@ -1969,35 +1985,68 @@ function abrirTentativa(leadId) {
   v('tObs').value = '';
   v('tProximoContato').value = '';
   v('tLeadNomeLabel').textContent = l ? `👤 ${l.nome} · ${l.telefone_principal}` : '';
+  v('mTentativaTitle').textContent = '📞 Registrar Tentativa de Contato';
+  v('tBtnSalvar').textContent = 'Registrar Tentativa';
+  toggleProximoContato();
+  closeModal('mLeadDetalhe');
+  openModal('mTentativa');
+}
+
+async function editarTentativa(tentativaId, leadId) {
+  const {data: t, error} = await sb.from('tentativas_contato').select('*').eq('id', tentativaId).single();
+  if(error || !t) { toast('Erro ao carregar tentativa', false); return; }
+  const l = allLeads.find(x => x.id === leadId);
+  v('tLeadId').value = leadId;
+  v('tEditId').value = tentativaId;
+  v('tData').value = t.data_contato||hoje;
+  if(v('tHorario')) v('tHorario').value = t.horario_contato||'';
+  v('tTipo').value = t.tipo_contato||'WhatsApp';
+  v('tResultado').value = t.resultado||'Não respondeu';
+  v('tObs').value = t.observacao||'';
+  v('tProximoContato').value = '';
+  v('tLeadNomeLabel').textContent = l ? `👤 ${l.nome} · ${l.telefone_principal}` : '';
+  v('mTentativaTitle').textContent = '✏️ Editar Tentativa de Contato';
+  v('tBtnSalvar').textContent = 'Salvar Alterações';
+  toggleProximoContato();
   closeModal('mLeadDetalhe');
   openModal('mTentativa');
 }
 
 async function salvarTentativa() {
-  const leadId = v('tLeadId').value;
-  const {data: existentes} = await sb.from('tentativas_contato').select('id').eq('lead_id', leadId);
-  const numero = (existentes||[]).length + 1;
-
-  const {error} = await sb.from('tentativas_contato').insert([{
-    lead_id: leadId,
-    data_contato: v('tData').value,
+  const leadId  = v('tLeadId').value;
+  const editId  = v('tEditId').value;
+  const payload = {
+    data_contato:    v('tData').value,
     horario_contato: v('tHorario').value||null,
-    tipo_contato: v('tTipo').value,
-    resultado: v('tResultado').value,
-    numero_tentativa: numero,
-    observacao: v('tObs').value||null
-  }]);
+    tipo_contato:    v('tTipo').value,
+    resultado:       v('tResultado').value,
+    observacao:      v('tObs').value||null
+  };
+
+  let error;
+  if(editId) {
+    // Modo edição — atualizar registro existente
+    ({error} = await sb.from('tentativas_contato').update(payload).eq('id', editId));
+  } else {
+    // Novo registro — calcular número da tentativa
+    const {data: existentes} = await sb.from('tentativas_contato').select('id').eq('lead_id', leadId);
+    ({error} = await sb.from('tentativas_contato').insert([{
+      ...payload,
+      lead_id: leadId,
+      numero_tentativa: (existentes||[]).length + 1
+    }]));
+  }
 
   if(error) { toast('Erro: '+error.message, false); return; }
 
+  // Atualizar próximo contato no lead (apenas se campo preenchido e resultado não encerra o contato)
   const proximoContato = v('tProximoContato').value;
   if(proximoContato) {
     await sb.from('leads').update({ data_proximo_contato: proximoContato }).eq('id', leadId);
-    await loadLeads();
-    renderLeads();
+    await loadLeads(); renderLeads();
   }
 
-  toast('Tentativa registrada!');
+  toast(editId ? 'Tentativa atualizada!' : 'Tentativa registrada!');
   closeModal('mTentativa');
   verLead(leadId);
 }
