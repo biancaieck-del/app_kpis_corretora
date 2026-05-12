@@ -1197,8 +1197,17 @@ let editingId = null;
 let deleteCallback = null;
 let emLeadsFiltrados = [];
 let chartsDrawn = {};
+// Retorna YYYY-MM-DD usando hora LOCAL (evita bug de fuso UTC)
+function localDateStr(d) {
+  return [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-');
+}
+function addDays(dateStr, n) {
+  const d = new Date(dateStr + 'T12:00:00'); // meio-dia evita DST
+  d.setDate(d.getDate() + n);
+  return localDateStr(d);
+}
 const _now = new Date();
-let hoje = [_now.getFullYear(), String(_now.getMonth()+1).padStart(2,'0'), String(_now.getDate()).padStart(2,'0')].join('-');
+let hoje = localDateStr(_now);
 
 // ── Helpers ────────────────────────────────────────
 const fmt = n => n == null ? '—' : 'R$ ' + Number(n).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -1374,12 +1383,9 @@ function loadDashboard() {
   v('dComissaoBruta').textContent = fmt(totalBruta);
 
   // Comissões a receber
-  const d30 = new Date(agora); d30.setDate(d30.getDate()+30);
-  const d60 = new Date(agora); d60.setDate(d60.getDate()+60);
-  const d90 = new Date(agora); d90.setDate(d90.getDate()+90);
-  const fmt30 = d30.toISOString().split('T')[0];
-  const fmt60 = d60.toISOString().split('T')[0];
-  const fmt90 = d90.toISOString().split('T')[0];
+  const fmt30 = addDays(hoje, 30);
+  const fmt60 = addDays(hoje, 60);
+  const fmt90 = addDays(hoje, 90);
   const r30 = allVendas.filter(vv => vv.data_prevista_comissao && vv.data_prevista_comissao <= fmt30 && vv.status !== 'Comissão Recebida').reduce((a,vv)=>a+(vv.comissao_liquida||0),0);
   const r60 = allVendas.filter(vv => vv.data_prevista_comissao && vv.data_prevista_comissao <= fmt60 && vv.data_prevista_comissao > fmt30 && vv.status !== 'Comissão Recebida').reduce((a,vv)=>a+(vv.comissao_liquida||0),0);
   const r90 = allVendas.filter(vv => vv.data_prevista_comissao && vv.data_prevista_comissao <= fmt90 && vv.data_prevista_comissao > fmt60 && vv.status !== 'Comissão Recebida').reduce((a,vv)=>a+(vv.comissao_liquida||0),0);
@@ -1405,8 +1411,7 @@ function loadDashboard() {
   // Próximos contatos
   const atrasados = allLeads.filter(l => l.data_proximo_contato && l.data_proximo_contato < hoje && !l.contato_encerrado);
   const deHoje = allLeads.filter(l => l.data_proximo_contato === hoje && !l.contato_encerrado);
-  const amanha = new Date(agora); amanha.setDate(amanha.getDate()+1);
-  const amanhaStr = amanha.toISOString().split('T')[0];
+  const amanhaStr = addDays(hoje, 1);
   const deAmanha = allLeads.filter(l => l.data_proximo_contato === amanhaStr && !l.contato_encerrado);
   let html = '';
   atrasados.slice(0,2).forEach(l => html += `<div class="alert-item r"><div><div class="alert-name">${l.nome}</div><div class="alert-info">Atrasado · ${l.tipo_imovel||''}</div></div><span class="badge badge-red">🔴 Atrasado</span></div>`);
@@ -1582,8 +1587,7 @@ function contactBadge(lead) {
   if(!lead.data_proximo_contato) return '<span class="badge badge-gray">—</span>';
   if(lead.data_proximo_contato < hoje) return '<span class="badge badge-red">🔴 Atrasado</span>';
   if(lead.data_proximo_contato === hoje) return '<span class="badge badge-yellow">🟡 Hoje</span>';
-  const amanha = new Date(); amanha.setDate(amanha.getDate()+1);
-  if(lead.data_proximo_contato === amanha.toISOString().split('T')[0]) return '<span class="badge badge-blue">🔵 Amanhã</span>';
+  if(lead.data_proximo_contato === addDays(hoje, 1)) return '<span class="badge badge-blue">🔵 Amanhã</span>';
   return '<span class="badge badge-gray">⚪ Em dia</span>';
 }
 
@@ -1610,8 +1614,7 @@ function renderLeads() {
       if(fUrg==='Atrasado' && !(l.data_proximo_contato < hoje && !l.contato_encerrado)) return false;
       if(fUrg==='Hoje' && !(l.data_proximo_contato === hoje && !l.contato_encerrado)) return false;
       if(fUrg==='Amanhã') {
-        const am = new Date(); am.setDate(am.getDate()+1);
-        if(l.data_proximo_contato !== am.toISOString().split('T')[0]) return false;
+        if(l.data_proximo_contato !== addDays(hoje, 1)) return false;
       }
     }
     return true;
@@ -2493,7 +2496,7 @@ async function renderMetaSemanasDoMes(semanas) {
   const container = v('metaSemanasContainer');
   if(!semanas.length) { container.innerHTML = '<div class="card"><div class="empty">Nenhuma semana neste período.</div></div>'; return; }
 
-  const hoje2 = new Date().toISOString().split('T')[0];
+  const hoje2 = hoje; // usa data local correta
   let html = '';
 
   for(let i=0; i<semanas.length; i++) {
